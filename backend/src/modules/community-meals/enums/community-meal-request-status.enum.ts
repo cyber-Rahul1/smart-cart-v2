@@ -1,0 +1,7 @@
+export enum CommunityMealRequestStatus {
+  SEARCHING = 'SEARCHING',
+  OFFERING = 'OFFERING',
+  CONFIRMED = 'CONFIRMED',
+  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
+}

@@ -43,6 +43,16 @@ import { RiderProfile } from '../../modules/users/entities/rider-profile.entity.
 import { ShopkeeperProfile } from '../../modules/users/entities/shopkeeper-profile.entity.js';
 import { User } from '../../modules/users/entities/user.entity.js';
 
+// Community Meals Entities
+import { CommunityMealCluster } from '../../modules/community-meals/entities/community-meal-cluster.entity.js';
+import { CommunityMealRequest } from '../../modules/community-meals/entities/community-meal-request.entity.js';
+import { CommunityMealOffer } from '../../modules/community-meals/entities/community-meal-offer.entity.js';
+import { MealAllocation } from '../../modules/community-meals/entities/meal-allocation.entity.js';
+import { MealConversation } from '../../modules/community-meals/entities/meal-conversation.entity.js';
+import { MealMenuLedger } from '../../modules/community-meals/entities/meal-menu-ledger.entity.js';
+import { KitchenCompliance } from '../../modules/community-meals/entities/kitchen-compliance.entity.js';
+import { SettlementInstruction } from '../../modules/financials/entities/settlement-instruction.entity.js';
+
 export const ALL_ENTITIES = [
   AuditLog,
   Message,
@@ -70,5 +80,13 @@ export const ALL_ENTITIES = [
   RiderProfile,
   ShopkeeperProfile,
   User,
-  OutboxEvent
+  OutboxEvent,
+  CommunityMealCluster,
+  CommunityMealRequest,
+  CommunityMealOffer,
+  MealAllocation,
+  MealConversation,
+  MealMenuLedger,
+  KitchenCompliance,
+  SettlementInstruction
 ];

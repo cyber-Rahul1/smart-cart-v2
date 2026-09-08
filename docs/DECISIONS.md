@@ -53,3 +53,12 @@ This file tracks significant technical and business decisions.
 - **Reason**: Safely handles retries and out-of-order queue delivery, ensuring meaningful lifecycle ordering and preventing spam.
 - **Alternatives**: Rely strictly on the current DB state to infer event relevance.
 - **Consequences**: Requires a strictly defined event schema for all BullMQ notification payloads.
+
+
+## ADR: Phase 12B Community Meals Foundation
+**Context**: Smart Cart 2.0 Community Meals requires matching unstructured demand to kitchens, ensuring strict FSSAI compliance, and supporting configurable GST and allergen liability tracing.
+**Decision**: 
+- Introduced separate entities (MealAllocation, MealMenuLedger, SettlementInstruction, KitchenCompliance).
+- Modeled FSSAI as a lifecycle status rather than a string.
+- Configured SettlementInstruction to split all payout lines explicitly for future tax routing.
+- Active allocations are constrained exclusively at the DB level using a partial unique index on (userId, requestId).

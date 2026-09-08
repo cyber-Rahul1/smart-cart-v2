@@ -61,3 +61,15 @@ All monetary columns (prices, totals, fees, taxes, payments, refunds, commission
 
 ### 2. TypeORM ESM Compatibility
 To support Node.js ESM alongside TypeORM's `emitDecoratorMetadata` without triggering `TS1272` or runtime circular dependency (`ReferenceError`) issues, relationships are typed using the official TypeORM `Relation<T>` utility. To comply with TS1272 restrictions on decorated signatures, the `Relation` utility itself is imported as a type (`import { type Relation } from 'typeorm'`). Entity circular references are resolved by passing the target name as a string (`@ManyToOne('Entity')`).
+
+
+## Phase 12B: Community Meals
+
+New domain entities added for Community Meals:
+- **CommunityMealRequest**: User demand vector with location, cuisine, budget.
+- **CommunityMealCluster**: Spatial aggregation centroid for matching.
+- **CommunityMealOffer**: Kitchen bid on a cluster.
+- **MealAllocation**: Unique linkage (userId, requestId) reserving an offer. Uses partial unique index for active status.
+- **MealMenuLedger**: Authoritative menu record including structured JSONB for allergens, ingredients, and substitutions.
+- **KitchenCompliance**: Strict technical gates (KYC, FSSAI valid/status, Operational status) required for marketplace participation.
+- **SettlementInstruction**: Granular settlement ledger separating gross amounts, commission, taxes, Gateway fees, into immutable records.

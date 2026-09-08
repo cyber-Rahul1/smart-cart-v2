@@ -50,3 +50,11 @@ Smart Cart 2.0 is a mobile-first e-commerce and delivery platform designed for s
 6. **Server-Authoritative Pricing**: Clients cannot be trusted for pricing, distance, or delivery fee logic. The backend recalculates everything (using PostGIS for distance) at the time of checkout.
 7. **Exact Monetary Calculations**: To avoid floating-point math errors, all monetary amounts are manipulated as integer minor units (paise/cents) internally, converting back to decimals for final storage or DTO representations.
 8. **Ephemeral Checkout Quotes**: Checkout preview quotes (`/checkout/preview`) are ephemeral. They do not persist to a database or lock prices. Ultimate order creation re-verifies these constraints.
+
+
+### Phase 12B: Community Meals Foundation
+
+The backend introduces a new community-meals module orchestrating a demand-first marketplace. Core principles established:
+- **Hard Provider Eligibility**: FSSAI, KYC, and Operational statuses act as hard technical gates at the DB layer (KitchenCompliance).
+- **Granular Settlement**: Tax/GST readiness is achieved via SettlementInstruction preserving un-squashed fee segments without hard-coding tax logic.
+- **Authoritative Lock**: A single timestamp menuLockAt controls all mutability.

@@ -43,3 +43,14 @@ Webhook processing remains the primary and authoritative mechanism for provider 
 ## Refunds & Failures
 - **Refunds**: Represented as a separate `Refund` entity linked to a `Payment`, tracking the refund amount, reason, and status. Triggered via the `refundPayment` abstraction.
 - **Failures & Retries**: Failed payments transition the order state. Retries involve creating a new payment session.
+
+
+## Community Meals Settlement (Phase 12B)
+
+SettlementInstruction entities now track payouts with absolute granularity:
+- customerGrossAmount
+- providerGrossAmount
+- platformCommission
+- paymentGatewayFees
+- discounts, refunds, adjustments, providerNetSettlement
+This ensures tax rule implementations (like GST splits) remain as configurable business logic applied to these separate lines.

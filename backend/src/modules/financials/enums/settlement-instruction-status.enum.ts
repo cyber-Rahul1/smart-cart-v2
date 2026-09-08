@@ -1,0 +1,7 @@
+export enum SettlementInstructionStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  FAILED_RETRY = 'FAILED_RETRY',
+}
