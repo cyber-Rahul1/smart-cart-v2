@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import { CommunityMealRequest } from '../entities/community-meal-request.entity.js';
@@ -161,15 +161,36 @@ export class CommunityMealClusteringService {
   }
 
   private decodeCursor(cursor: string): { distance: number; clusterId: string } {
+    let decodedString: string;
     try {
-      const decoded = JSON.parse(Buffer.from(cursor, 'base64').toString('utf8'));
-      if (typeof decoded.distance !== 'number' || typeof decoded.clusterId !== 'string') {
-        throw new Error();
-      }
-      return decoded;
+      decodedString = Buffer.from(cursor, 'base64').toString('utf8');
     } catch {
-      return { distance: 0, clusterId: '' };
+      throw new BadRequestException('Invalid cursor encoding');
     }
+
+    let decoded: any;
+    try {
+      decoded = JSON.parse(decodedString);
+    } catch {
+      throw new BadRequestException('Invalid cursor format');
+    }
+
+    if (!decoded || typeof decoded !== 'object') {
+      throw new BadRequestException('Invalid cursor structure');
+    }
+
+    if (typeof decoded.distance !== 'number' || !Number.isFinite(decoded.distance) || decoded.distance < 0) {
+      throw new BadRequestException('Invalid cursor distance');
+    }
+
+    if (typeof decoded.clusterId !== 'string' || decoded.clusterId.trim() === '') {
+      throw new BadRequestException('Invalid cursor clusterId');
+    }
+
+    return {
+      distance: decoded.distance,
+      clusterId: decoded.clusterId,
+    };
   }
 
   async getNearbyClusters(lat: number, lng: number, limit: number, cursor?: string) {

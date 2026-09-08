@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BadRequestException } from '@nestjs/common';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CommunityMealCluster } from '../entities/community-meal-cluster.entity.js';
@@ -171,5 +172,95 @@ describe('Community Meals Clustering (Integration)', () => {
 
     const clusters = await clusterRepo.find({ where: { cuisine: 'Italian' } });
     expect(clusters.length).toBe(2); // Separated because > 2000m
+  });
+
+  describe('Cursor Validation', () => {
+    it('1. valid cursor decodes successfully', async () => {
+      // Create a valid cursor manually
+      const validCursor = Buffer.from(JSON.stringify({ distance: 10.5, clusterId: 'some-uuid' })).toString('base64');
+      // No throw means success (we expect an array of clusters returned without errors)
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, validCursor)).resolves.toBeDefined();
+    });
+
+    it('2. malformed Base64 cursor -> 400', async () => {
+      // Invalid base64 that can't be decoded properly into a UTF8 string
+      // But actually, Node.js Buffer handles weird base64 strings gracefully usually, 
+      // so if it parses to garbage string, JSON.parse will fail and we get format error.
+      // We will provide a completely garbage string that doesn't decode to JSON.
+      const malformedCursor = 'invalid-base-64!';
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, malformedCursor)).rejects.toThrow(BadRequestException);
+    });
+
+    it('3. malformed JSON cursor -> 400', async () => {
+      const cursor = Buffer.from('{"distance": 10').toString('base64'); // incomplete JSON
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, cursor)).rejects.toThrow(BadRequestException);
+    });
+
+    it('4. missing distance -> 400', async () => {
+      const cursor = Buffer.from(JSON.stringify({ clusterId: 'uuid' })).toString('base64');
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, cursor)).rejects.toThrow(BadRequestException);
+    });
+
+    it('5. missing clusterId -> 400', async () => {
+      const cursor = Buffer.from(JSON.stringify({ distance: 10 })).toString('base64');
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, cursor)).rejects.toThrow(BadRequestException);
+    });
+
+    it('6. invalid distance -> 400', async () => {
+      // Distance should be a finite positive number
+      const cursor = Buffer.from(JSON.stringify({ distance: -10, clusterId: 'uuid' })).toString('base64');
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, cursor)).rejects.toThrow(BadRequestException);
+
+      const cursorNaN = Buffer.from(JSON.stringify({ distance: 'not-a-number', clusterId: 'uuid' })).toString('base64');
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, cursorNaN)).rejects.toThrow(BadRequestException);
+    });
+
+    it('7. invalid clusterId -> 400', async () => {
+      const cursor = Buffer.from(JSON.stringify({ distance: 10, clusterId: '' })).toString('base64');
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, cursor)).rejects.toThrow(BadRequestException);
+
+      const cursorNum = Buffer.from(JSON.stringify({ distance: 10, clusterId: 123 })).toString('base64');
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, cursorNum)).rejects.toThrow(BadRequestException);
+    });
+
+    it('8 & 9. valid cursor still correctly filters subsequent pages and never falls back to page 1', async () => {
+      // Insert multiple clusters
+      const user = await userRepo.save(userRepo.create({ phoneNumber: '+1' + Math.floor(Math.random() * 1000000000) }));
+      const baseTime = new Date(Date.now() + 3600000);
+      
+      const c1 = await clusterRepo.save(clusterRepo.create({
+        centroid: { type: 'Point', coordinates: [77.5946, 12.9716] }, // same spot, dist 0
+        timeWindowStart: baseTime,
+        timeWindowEnd: new Date(baseTime.getTime() + 3600000),
+        cuisine: 'Thai',
+        mealType: 'Dinner',
+        status: CommunityMealClusterStatus.OFFERING,
+        minimumThreshold: 3,
+      }));
+
+      const c2 = await clusterRepo.save(clusterRepo.create({
+        centroid: { type: 'Point', coordinates: [77.5956, 12.9716] }, // further
+        timeWindowStart: baseTime,
+        timeWindowEnd: new Date(baseTime.getTime() + 3600000),
+        cuisine: 'Thai',
+        mealType: 'Dinner',
+        status: CommunityMealClusterStatus.OFFERING,
+        minimumThreshold: 3,
+      }));
+
+      // Get page 1 (limit 1)
+      const res1 = await clusteringService.getNearbyClusters(12.9716, 77.5946, 1);
+      expect(res1.clusters).toHaveLength(1);
+      expect(res1.nextCursor).toBeDefined();
+      
+      // Get page 2 with valid cursor
+      const res2 = await clusteringService.getNearbyClusters(12.9716, 77.5946, 1, res1.nextCursor!);
+      expect(res2.clusters).toHaveLength(1);
+      expect(res2.clusters[0].id).not.toBe(res1.clusters[0].id);
+
+      // Verify that bad cursor -> 400, not page 1
+      const badCursor = Buffer.from('invalid').toString('base64');
+      await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 1, badCursor)).rejects.toThrow(BadRequestException);
+    });
   });
 });
