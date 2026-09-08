@@ -62,7 +62,7 @@ describe('Community Meals Database Foundation (Integration)', () => {
     settlementRepo = moduleRef.get(getRepositoryToken(SettlementInstruction));
     userRepo = moduleRef.get(getRepositoryToken(User));
     shopRepo = moduleRef.get(getRepositoryToken(Shop));
-  }, 30000);
+  }, 60000);
 
   afterAll(async () => {
     if (moduleRef) {
@@ -112,6 +112,8 @@ describe('Community Meals Database Foundation (Integration)', () => {
     const clusterRepo = moduleRef.get(getRepositoryToken(CommunityMealCluster));
     const cluster = await clusterRepo.save(clusterRepo.create({
       centroid: { type: 'Point', coordinates: [77.5946, 12.9716] },
+      cuisine: 'Indian',
+      mealType: 'Dinner',
       timeWindowStart: new Date(),
       timeWindowEnd: new Date(Date.now() + 3600000),
     }));

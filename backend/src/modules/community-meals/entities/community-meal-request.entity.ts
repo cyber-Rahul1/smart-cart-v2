@@ -45,6 +45,9 @@ export class CommunityMealRequest {
   @Column({ nullable: true })
   spiceLevel: string;
 
+  @Column({ nullable: true })
+  dietaryRestrictions: string;
+
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   budgetMin: number;
 

@@ -30,6 +30,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
 import { APP_GUARD } from '@nestjs/core';
 import { AppThrottlerGuard } from './core/guards/app-throttler.guard.js';
+import { CommunityMealsModule } from './modules/community-meals/community-meals.module.js';
 
 @Module({
   imports: [
@@ -78,6 +79,7 @@ import { AppThrottlerGuard } from './core/guards/app-throttler.guard.js';
     PaymentsModule,
     OutboxModule,
     ShopkeeperOrdersModule,
+    CommunityMealsModule,
   ],
   controllers: [AppController],
   providers: [

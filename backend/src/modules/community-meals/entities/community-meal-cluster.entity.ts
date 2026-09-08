@@ -24,6 +24,18 @@ export class CommunityMealCluster {
   @Column({ type: 'timestamptz' })
   timeWindowEnd: Date;
 
+  @Column({ type: 'varchar' })
+  cuisine: string;
+
+  @Column({ type: 'varchar' })
+  mealType: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  dietaryRestrictions: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  spiceLevel: string;
+
   @Column({ type: 'enum', enum: CommunityMealClusterStatus, default: CommunityMealClusterStatus.GATHERING_DEMAND })
   status: CommunityMealClusterStatus;
 
