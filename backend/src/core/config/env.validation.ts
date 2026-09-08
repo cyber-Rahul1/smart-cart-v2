@@ -78,4 +78,6 @@ export const envValidationSchema = Joi.object({
     then: Joi.string().required(),
     otherwise: Joi.string().optional().allow(''),
   }),
+
+  NEW_BUSINESS_DAYS: Joi.number().default(30),
 });

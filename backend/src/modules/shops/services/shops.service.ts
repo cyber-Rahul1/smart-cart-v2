@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Shop } from '../entities/shop.entity.js';
@@ -17,6 +18,7 @@ export class ShopsService {
     @InjectRepository(AuditLog)
     private readonly auditLogRepo: Repository<AuditLog>,
     private readonly dataSource: DataSource,
+    private readonly configService: ConfigService,
   ) {}
 
   async createShop(userId: string, dto: CreateShopDto): Promise<Shop> {
@@ -85,6 +87,11 @@ export class ShopsService {
     
     const oldStatus = shop.status;
     shop.status = dto.status;
+    
+    if (dto.status === ShopStatus.ACTIVE && !shop.publishedAt) {
+      shop.publishedAt = new Date();
+    }
+    
     const savedShop = await this.shopRepo.save(shop);
 
     await this.auditLogRepo.save({
@@ -136,5 +143,124 @@ export class ShopsService {
     // Since TypeORM getMany doesn't easily return the ST_Distance in the same object without getRawAndEntities,
     // we can use getRawAndEntities for more complex projections if needed, but getMany is fine if we just want to return the shop.
     return { shops, total };
+  }
+
+  private decodeNewNearYouCursor(cursor: string) {
+    try {
+      const decoded = Buffer.from(cursor, 'base64').toString('utf8');
+      const parts = decoded.split('_');
+      if (parts.length !== 3) throw new Error();
+      const distance = parseFloat(parts[0]);
+      if (isNaN(distance)) throw new Error();
+      return {
+        distance,
+        publishedAtEpoch: parseInt(parts[1], 10),
+        shopId: parts[2],
+      };
+    } catch {
+      throw new BadRequestException('Invalid cursor format');
+    }
+  }
+
+  private encodeNewNearYouCursor(distance: number, publishedAtEpoch: number, shopId: string) {
+    const raw = `${distance}_${publishedAtEpoch}_${shopId}`;
+    return Buffer.from(raw).toString('base64');
+  }
+
+  async getNewNearYouShops(lat: number, lng: number, radius: number, limit: number, cursor?: string) {
+    if (limit > 50) limit = 50;
+
+    const newBusinessDays = this.configService.get<number>('NEW_BUSINESS_DAYS', 30);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - newBusinessDays);
+
+    const params: any[] = [lng, lat, radius, cutoffDate];
+    let paramIndex = 5;
+    let cursorCondition = '';
+
+    if (cursor) {
+      const { distance, publishedAtEpoch, shopId } = this.decodeNewNearYouCursor(cursor);
+      const cursorDate = new Date(publishedAtEpoch).toISOString();
+      
+      cursorCondition = `
+        AND (
+          ROUND(ST_Distance(s.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography)::numeric, 2) > $${paramIndex}
+          OR (
+            ROUND(ST_Distance(s.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography)::numeric, 2) = $${paramIndex}
+            AND s."publishedAt" < $${paramIndex + 1}
+          )
+          OR (
+            ROUND(ST_Distance(s.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography)::numeric, 2) = $${paramIndex}
+            AND s."publishedAt" = $${paramIndex + 1}
+            AND s.id > $${paramIndex + 2}
+          )
+        )
+      `;
+      params.push(distance, cursorDate, shopId);
+      paramIndex += 3;
+    }
+
+    const rawQuery = `
+      SELECT 
+        s.id,
+        s."ownerId",
+        s.name,
+        s.description,
+        s.logo,
+        s.banner,
+        s."deliveryRadius",
+        s."minimumOrder",
+        s."preparationTime",
+        s.status,
+        s."createdAt",
+        s."updatedAt",
+        s."deletedAt",
+        s."publishedAt",
+        ST_AsGeoJSON(s.location) as location,
+        ROUND(ST_Distance(s.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography)::numeric, 2) as distance
+      FROM shops s
+      WHERE s.status = '${ShopStatus.ACTIVE}'
+        AND s."publishedAt" >= $4
+        AND ST_DWithin(s.location, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography, $3)
+        ${cursorCondition}
+      ORDER BY 
+        distance ASC,
+        s."publishedAt" DESC,
+        s.id ASC
+      LIMIT ${limit + 1}
+    `;
+
+    const rawResults = await this.dataSource.query(rawQuery, params);
+    
+    const results = [];
+    for (const row of rawResults) {
+      if (results.length >= limit) break;
+      
+      const shop = this.shopRepo.create({
+        ...row,
+        location: JSON.parse(row.location),
+        minimumOrder: Number(row.minimumOrder), // parse numeric types
+      });
+      // Attach distance property dynamically if needed or just return shop
+      (shop as any).distance = Number(row.distance);
+      results.push(shop);
+    }
+
+    let nextCursor = null;
+    if (rawResults.length > limit) {
+      const lastItem = results[results.length - 1];
+      if (lastItem && lastItem.publishedAt) {
+        nextCursor = this.encodeNewNearYouCursor(
+          (lastItem as any).distance, 
+          lastItem.publishedAt.getTime(), 
+          lastItem.id
+        );
+      }
+    }
+
+    return {
+      shops: results,
+      nextCursor,
+    };
   }
 }

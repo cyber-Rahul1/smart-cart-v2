@@ -50,6 +50,9 @@ export class Shop {
   @OneToMany('ShopHours', (hours: any) => hours.shop, { cascade: true })
   hours: Relation<ShopHours>;
 
+  @Column({ type: 'timestamptz', nullable: true })
+  publishedAt: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

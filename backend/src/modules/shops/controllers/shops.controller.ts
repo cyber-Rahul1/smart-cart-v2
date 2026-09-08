@@ -25,6 +25,25 @@ export class ShopsController {
     };
   }
 
+  @Get('new-near-you')
+  async getNewNearYouShops(
+    @Query('lat', ParseFloatPipe) lat: number,
+    @Query('lng', ParseFloatPipe) lng: number,
+    @Query('radius', new DefaultValuePipe(5000), ParseIntPipe) radius: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('cursor') cursor?: string,
+  ) {
+    const { shops, nextCursor } = await this.shopsService.getNewNearYouShops(lat, lng, radius, limit, cursor);
+    return {
+      success: true,
+      data: shops,
+      meta: {
+        limit,
+        nextCursor,
+      },
+    };
+  }
+
   @Get(':shopId')
   async getShopById(@Param('shopId') shopId: string) {
     const shop = await this.shopsService.getShopById(shopId);
