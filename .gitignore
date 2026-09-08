@@ -1,0 +1,150 @@
+﻿# ============================================================
+# Smart Cart 2.0 — Monorepo Root .gitignore
+# ============================================================
+
+# ------------------------------------------------------------
+# Secrets & Credentials — NEVER commit these
+# ------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.test.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.crt
+*.cert
+# Firebase service-account credentials (admin SDK private keys)
+*firebase-adminsdk*.json
+*service-account*.json
+*service_account*.json
+# Cloud credentials
+*.credentials
+credentials.json
+# Keystore files (Android signing)
+*.jks
+*.keystore
+
+# ------------------------------------------------------------
+# Backend — Node.js / NestJS / TypeScript
+# ------------------------------------------------------------
+backend/node_modules/
+backend/dist/
+backend/coverage/
+backend/.nyc_output/
+backend/tsconfig.build.tsbuildinfo
+# Log/test output files
+backend/*.log
+backend/test-output.log
+backend/test_output.txt
+backend/scratch/
+# TypeORM generated temp files
+backend/ormconfig.js
+
+# ------------------------------------------------------------
+# Admin — Next.js
+# ------------------------------------------------------------
+admin/node_modules/
+admin/.next/
+admin/out/
+admin/coverage/
+admin/.nyc_output/
+admin/*.log
+admin/.env
+admin/.env.*
+!admin/.env.example
+
+# ------------------------------------------------------------
+# Mobile — Kotlin Multiplatform / Gradle / Android / iOS
+# ------------------------------------------------------------
+
+# Gradle
+mobile/.gradle/
+mobile/build/
+mobile/**/build/
+mobile/**/.gradle/
+mobile/gradle-8.7/
+mobile/gradle.zip
+mobile/.kotlin/
+mobile/logcat.txt
+mobile/logcat2.txt
+
+# Android local config (contains local SDK path — machine-specific)
+mobile/local.properties
+
+# IDE metadata (IntelliJ/Android Studio)
+mobile/.idea/*
+!mobile/.idea/codeStyles/
+!mobile/.idea/inspectionProfiles/
+mobile/.idea/workspace.xml
+mobile/.idea/shelf/
+*.iml
+*.ipr
+*.iws
+
+# Android generated artifacts
+mobile/**/*.apk
+mobile/**/*.aab
+mobile/**/*.ap_
+mobile/**/*.dex
+
+# iOS — Xcode generated artifacts
+mobile/iosApp/DerivedData/
+mobile/iosApp/build/
+mobile/iosApp/*.xcworkspace/xcuserdata/
+mobile/iosApp/**/*.xcuserstate
+mobile/iosApp/xcuserdata/
+mobile/iosApp/*.xccheckout
+mobile/iosApp/*.moved-aside
+mobile/iosApp/Pods/
+mobile/iosApp/Podfile.lock
+mobile/iosApp/.build/
+
+# ------------------------------------------------------------
+# OS-generated files
+# ------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ------------------------------------------------------------
+# Editor / IDE metadata
+# ------------------------------------------------------------
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.vscode/extensions.json
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# ------------------------------------------------------------
+# Logs
+# ------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# ------------------------------------------------------------
+# Runtime / Temporary files
+# ------------------------------------------------------------
+.tmp/
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/

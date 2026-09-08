@@ -1,0 +1,100 @@
+CREATE TABLE CategoryEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    shopId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    deletedAt TEXT,
+    lastUpdated INTEGER NOT NULL
+);
+
+CREATE TABLE ShopEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    ownerId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    latitude REAL NOT NULL,
+    longitude REAL NOT NULL,
+    logo TEXT,
+    banner TEXT,
+    deliveryRadius INTEGER NOT NULL,
+    minimumOrder REAL NOT NULL,
+    preparationTime INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    deletedAt TEXT,
+    lastUpdated INTEGER NOT NULL
+);
+
+CREATE TABLE ProductEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    shopId TEXT NOT NULL,
+    categoryId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    image TEXT,
+    price REAL NOT NULL,
+    status TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL,
+    deletedAt TEXT,
+    lastUpdated INTEGER NOT NULL
+);
+
+CREATE TABLE BrowseCacheEntity (
+    cacheKey TEXT NOT NULL PRIMARY KEY,
+    ids TEXT NOT NULL, -- comma-separated list of IDs
+    lastUpdated INTEGER NOT NULL
+);
+
+insertCategory:
+INSERT OR REPLACE INTO CategoryEntity(id, shopId, name, description, createdAt, updatedAt, deletedAt, lastUpdated)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+getCategoryById:
+SELECT * FROM CategoryEntity WHERE id = ?;
+
+getCategoriesByShopId:
+SELECT * FROM CategoryEntity WHERE shopId = ?;
+
+deleteCategoriesByShopId:
+DELETE FROM CategoryEntity WHERE shopId = ?;
+
+insertShop:
+INSERT OR REPLACE INTO ShopEntity(id, ownerId, name, description, latitude, longitude, logo, banner, deliveryRadius, minimumOrder, preparationTime, status, createdAt, updatedAt, deletedAt, lastUpdated)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getShopById:
+SELECT * FROM ShopEntity WHERE id = ?;
+
+deleteShopById:
+DELETE FROM ShopEntity WHERE id = ?;
+
+insertProduct:
+INSERT OR REPLACE INTO ProductEntity(id, shopId, categoryId, name, description, image, price, status, version, createdAt, updatedAt, deletedAt, lastUpdated)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getProductById:
+SELECT * FROM ProductEntity WHERE id = ?;
+
+getProductsByShopId:
+SELECT * FROM ProductEntity WHERE shopId = ?;
+
+getProductsByCategoryId:
+SELECT * FROM ProductEntity WHERE categoryId = ?;
+
+deleteProductsByShopId:
+DELETE FROM ProductEntity WHERE shopId = ?;
+
+insertBrowseCache:
+INSERT OR REPLACE INTO BrowseCacheEntity(cacheKey, ids, lastUpdated)
+VALUES (?, ?, ?);
+
+getBrowseCache:
+SELECT * FROM BrowseCacheEntity WHERE cacheKey = ?;
+
+deleteBrowseCache:
+DELETE FROM BrowseCacheEntity WHERE cacheKey = ?;

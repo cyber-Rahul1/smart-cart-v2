@@ -1,0 +1,34 @@
+﻿# Node modules
+node_modules/
+
+# Build output
+dist/
+
+# Environment files (secrets) — keep .env.example
+.env
+.env.*
+!.env.example
+
+# Firebase service-account admin SDK credential (private key — NEVER commit)
+*firebase-adminsdk*.json
+*service-account*.json
+*service_account*.json
+
+# Test & coverage output
+coverage/
+.nyc_output/
+test-output.log
+test_output.txt
+
+# TypeScript incremental build info
+tsconfig.build.tsbuildinfo
+
+# Scratch / one-off scripts
+scratch/
+
+# Logs
+*.log
+logs/
+
+# TypeORM CLI generated temp
+ormconfig.js
