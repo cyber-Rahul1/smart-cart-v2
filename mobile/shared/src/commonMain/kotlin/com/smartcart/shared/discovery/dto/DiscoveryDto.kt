@@ -32,6 +32,7 @@ data class ShopDto(
     val minimumOrder: Double,
     val preparationTime: Int,
     val status: String,
+    val publishedAt: String? = null,
     val createdAt: String,
     val updatedAt: String,
     val deletedAt: String? = null
@@ -57,7 +58,8 @@ data class ProductDto(
 data class MetaDto(
     val page: Int? = null,
     val limit: Int? = null,
-    val total: Int? = null
+    val total: Int? = null,
+    val nextCursor: String? = null
 )
 
 @Serializable

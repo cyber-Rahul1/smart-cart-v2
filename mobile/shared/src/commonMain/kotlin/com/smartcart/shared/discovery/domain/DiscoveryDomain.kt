@@ -19,7 +19,8 @@ data class Shop(
     val deliveryRadius: Int,
     val minimumOrder: Double,
     val preparationTime: Int,
-    val status: String
+    val status: String,
+    val publishedAt: String?
 )
 
 data class Product(
@@ -44,5 +45,6 @@ data class PaginatedData<T>(
     val items: List<T>,
     val page: Int,
     val limit: Int,
-    val total: Int
+    val total: Int,
+    val nextCursor: String? = null
 )

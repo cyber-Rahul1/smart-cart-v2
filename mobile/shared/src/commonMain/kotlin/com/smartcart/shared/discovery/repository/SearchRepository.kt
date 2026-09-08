@@ -32,7 +32,7 @@ class SearchRepository(
             
             val domainShops = response.data.map { dto ->
                  Shop(dto.id, dto.ownerId, dto.name, dto.description, dto.location.coordinates[1], dto.location.coordinates[0], 
-                      dto.logo, dto.banner, dto.deliveryRadius, dto.minimumOrder, dto.preparationTime, dto.status)
+                      dto.logo, dto.banner, dto.deliveryRadius, dto.minimumOrder, dto.preparationTime, dto.status, dto.publishedAt)
             }
             val paginatedData = PaginatedData(domainShops, response.meta.page ?: page, response.meta.limit ?: limit, response.meta.total ?: domainShops.size)
             

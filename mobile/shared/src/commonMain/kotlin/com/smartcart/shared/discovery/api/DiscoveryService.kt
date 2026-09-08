@@ -29,6 +29,22 @@ class DiscoveryService(private val client: HttpClient, private val baseUrl: Stri
         }.body()
     }
 
+    suspend fun getNewNearYou(
+        lat: Double,
+        lng: Double,
+        radius: Int = 5000,
+        limit: Int = 20,
+        cursor: String? = null
+    ): PaginatedResponseDto<ShopDto> {
+        return client.get("$baseUrl/shops/new-near-you") {
+            parameter("lat", lat)
+            parameter("lng", lng)
+            parameter("radius", radius)
+            parameter("limit", limit)
+            if (cursor != null) parameter("cursor", cursor)
+        }.body()
+    }
+
     suspend fun getShopById(shopId: String): SingleResponseDto<ShopDto> {
         return client.get("$baseUrl/shops/$shopId").body()
     }

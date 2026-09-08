@@ -232,16 +232,15 @@ export class ShopsService {
 
     const rawResults = await this.dataSource.query(rawQuery, params);
     
-    const results = [];
+    const results: Shop[] = [];
     for (const row of rawResults) {
       if (results.length >= limit) break;
       
       const shop = this.shopRepo.create({
         ...row,
         location: JSON.parse(row.location),
-        minimumOrder: Number(row.minimumOrder), // parse numeric types
-      });
-      // Attach distance property dynamically if needed or just return shop
+        minimumOrder: Number(row.minimumOrder),
+      } as any) as unknown as Shop;
       (shop as any).distance = Number(row.distance);
       results.push(shop);
     }

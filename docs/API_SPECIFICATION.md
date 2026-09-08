@@ -58,6 +58,7 @@
 
 ### Shops Module (`/api/v1/shops`)
 - `GET /` (Query by location radius)
+- `GET /new-near-you` (Discover newly activated shops by location radius with keyset pagination)
 - `GET /:id`
 - `GET /:id/products`
 

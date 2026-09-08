@@ -22,6 +22,7 @@ CREATE TABLE ShopEntity (
     minimumOrder REAL NOT NULL,
     preparationTime INTEGER NOT NULL,
     status TEXT NOT NULL,
+    publishedAt TEXT,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL,
     deletedAt TEXT,
@@ -64,8 +65,8 @@ deleteCategoriesByShopId:
 DELETE FROM CategoryEntity WHERE shopId = ?;
 
 insertShop:
-INSERT OR REPLACE INTO ShopEntity(id, ownerId, name, description, latitude, longitude, logo, banner, deliveryRadius, minimumOrder, preparationTime, status, createdAt, updatedAt, deletedAt, lastUpdated)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO ShopEntity(id, ownerId, name, description, latitude, longitude, logo, banner, deliveryRadius, minimumOrder, preparationTime, status, publishedAt, createdAt, updatedAt, deletedAt, lastUpdated)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getShopById:
 SELECT * FROM ShopEntity WHERE id = ?;
