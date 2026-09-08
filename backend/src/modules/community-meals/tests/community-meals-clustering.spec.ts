@@ -177,7 +177,7 @@ describe('Community Meals Clustering (Integration)', () => {
   describe('Cursor Validation', () => {
     it('1. valid cursor decodes successfully', async () => {
       // Create a valid cursor manually
-      const validCursor = Buffer.from(JSON.stringify({ distance: 10.5, clusterId: 'some-uuid' })).toString('base64');
+      const validCursor = Buffer.from(JSON.stringify({ distance: 10.5, clusterId: '00000000-0000-0000-0000-000000000000' })).toString('base64');
       // No throw means success (we expect an array of clusters returned without errors)
       await expect(clusteringService.getNearbyClusters(12.9716, 77.5946, 10, validCursor)).resolves.toBeDefined();
     });

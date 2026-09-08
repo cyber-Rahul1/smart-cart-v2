@@ -13,7 +13,12 @@ import { CommunityMealOffer } from './entities/community-meal-offer.entity.js';
 import { MealAllocation } from './entities/meal-allocation.entity.js';
 import { MealConversation } from './entities/meal-conversation.entity.js';
 import { MealMenuLedger } from './entities/meal-menu-ledger.entity.js';
-
+import { KitchenCompliance } from './entities/kitchen-compliance.entity.js';
+import { Shop } from '../shops/entities/shop.entity.js';
+import { KitchenCommunityMealsController } from './controllers/kitchen-community-meals.controller.js';
+import { CustomerCommunityMealOffersController } from './controllers/customer-community-meal-offers.controller.js';
+import { KitchenEligibilityService } from './services/kitchen-eligibility.service.js';
+import { CommunityMealOffersService } from './services/community-meal-offers.service.js';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -23,6 +28,8 @@ import { MealMenuLedger } from './entities/meal-menu-ledger.entity.js';
       MealAllocation,
       MealConversation,
       MealMenuLedger,
+      KitchenCompliance,
+      Shop,
     ]),
     BullModule.registerQueue({
       name: 'community-meals-clustering',
@@ -31,13 +38,20 @@ import { MealMenuLedger } from './entities/meal-menu-ledger.entity.js';
       name: 'community-meals-expiration',
     }),
   ],
-  controllers: [CommunityMealRequestsController, CommunityMealClustersController],
+  controllers: [
+    CommunityMealRequestsController, 
+    CommunityMealClustersController,
+    KitchenCommunityMealsController,
+    CustomerCommunityMealOffersController,
+  ],
   providers: [
     CommunityMealRequestsService,
     CommunityMealClusteringService,
+    KitchenEligibilityService,
+    CommunityMealOffersService,
     ClusteringProcessor,
     ExpirationProcessor,
   ],
-  exports: [CommunityMealRequestsService, CommunityMealClusteringService],
+  exports: [CommunityMealRequestsService, CommunityMealClusteringService, KitchenEligibilityService, CommunityMealOffersService],
 })
 export class CommunityMealsModule {}

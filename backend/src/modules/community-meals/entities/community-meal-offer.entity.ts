@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn, type Relation } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn, Check, type Relation } from 'typeorm';
 import { CommunityMealOfferStatus } from '../enums/community-meal-offer-status.enum.js';
 import type { CommunityMealCluster } from './community-meal-cluster.entity.js';
 import type { Shop } from '../../shops/entities/shop.entity.js';
@@ -6,6 +6,10 @@ import type { Shop } from '../../shops/entities/shop.entity.js';
 @Entity('community_meal_offers')
 @Index(['clusterId', 'status'])
 @Index(['expiresAt'])
+@Check('"availableQty" >= 0')
+@Check('"reservedQty" >= 0')
+@Check('"committedQty" >= 0')
+@Check('"availableQty" + "reservedQty" + "committedQty" <= "maxQuantity"')
 export class CommunityMealOffer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -33,8 +37,14 @@ export class CommunityMealOffer {
   @Column({ type: 'int' })
   maxQuantity: number;
 
-  @Column({ type: 'int' })
+  @Column({ type: 'int', default: 0 })
   availableQty: number;
+
+  @Column({ type: 'int', default: 0 })
+  reservedQty: number;
+
+  @Column({ type: 'int', default: 0 })
+  committedQty: number;
 
   @Column({ type: 'text' })
   menuDescription: string;
