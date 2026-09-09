@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { DataSource } from 'typeorm';
 import { OutboxEvent, OutboxEventStatus } from './entities/outbox-event.entity.js';
 import { Order } from '../orders/entities/order.entity.js';
+import { OrderStatus } from '../orders/enums/order-status.enum.js';
 import { Shop } from '../shops/entities/shop.entity.js';
 import { Delivery } from '../logistics/entities/delivery.entity.js';
 import { DeliveryStatus } from '../logistics/enums/delivery-status.enum.js';
@@ -13,6 +14,9 @@ import { NotificationService } from '../audit/services/notification.service.js';
 import { PushDispatchService } from '../notifications/services/push-dispatch.service.js';
 import { Notification } from '../audit/entities/notification.entity.js';
 import { PaymentsService } from '../payments/payments.service.js';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { FINANCIAL_SETTLEMENTS_QUEUE, JOB_EVALUATE_SETTLEMENT } from '../financials/constants/financials.constants.js';
 
 /**
  * OutboxProcessor -- BullMQ worker that executes committed outbox events.
@@ -37,6 +41,7 @@ export class OutboxProcessor extends WorkerHost {
     private readonly notificationService: NotificationService,
     private readonly pushDispatchService: PushDispatchService,
     private readonly paymentsService: PaymentsService,
+    @InjectQueue(FINANCIAL_SETTLEMENTS_QUEUE) private readonly settlementQueue: Queue,
   ) {
     super();
   }
@@ -71,7 +76,14 @@ export class OutboxProcessor extends WorkerHost {
           await this.handleNotification(event, 'Delivery OTP', `Your delivery OTP is ${event.payload.otp}`);
           break;
         case 'order.status.changed':
-          await this.handleNotification(event, 'Order Update', `Your order status changed to ${event.payload.newStatus}`);
+          await this.handleNotification(event, 'Order Update', `Your order status changed to ${event.payload.newStatus || event.payload.status}`);
+          if ((event.payload.newStatus || event.payload.status) === OrderStatus.DELIVERED) {
+            await this.settlementQueue.add(JOB_EVALUATE_SETTLEMENT, { orderId: event.payload.orderId }, { 
+              jobId: `settle-${event.payload.orderId}`,
+              attempts: 5,
+              backoff: { type: 'exponential', delay: 5000 },
+            });
+          }
           break;
         case 'refund.initiated':
           await this.handleRefund(event);

@@ -7,12 +7,14 @@ import { OutboxProcessor } from './outbox.processor.js';
 import { LogisticsModule } from '../logistics/logistics.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { PaymentsModule } from '../payments/payments.module.js';
+import { FINANCIAL_SETTLEMENTS_QUEUE } from '../financials/constants/financials.constants.js';
 import { OUTBOX_QUEUE } from '../logistics/constants/logistics.constants.js';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([OutboxEvent]),
     BullModule.registerQueue({ name: OUTBOX_QUEUE }),
+    BullModule.registerQueue({ name: FINANCIAL_SETTLEMENTS_QUEUE }),
     LogisticsModule,
     NotificationsModule,
     PaymentsModule,

@@ -10,6 +10,10 @@ import { MealAllocation } from '../community-meals/entities/meal-allocation.enti
 import { MealMenuLedger } from '../community-meals/entities/meal-menu-ledger.entity.js';
 import { AuditLog } from '../audit/entities/audit-log.entity.js';
 
+import { BullModule } from '@nestjs/bullmq';
+import { FINANCIAL_SETTLEMENTS_QUEUE } from './constants/financials.constants.js';
+import { SettlementEligibilityProcessor } from './jobs/settlement-eligibility.processor.js';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -22,8 +26,9 @@ import { AuditLog } from '../audit/entities/audit-log.entity.js';
       MealMenuLedger,
       AuditLog,
     ]),
+    BullModule.registerQueue({ name: FINANCIAL_SETTLEMENTS_QUEUE }),
   ],
-  providers: [SettlementInstructionService],
+  providers: [SettlementInstructionService, SettlementEligibilityProcessor],
   exports: [SettlementInstructionService],
 })
 export class FinancialsModule {}
