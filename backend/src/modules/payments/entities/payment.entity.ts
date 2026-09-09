@@ -1,10 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, VersionColumn, Index, type Relation } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, VersionColumn, Index, Check, type Relation } from 'typeorm';
 import type { Order } from '../../orders/entities/order.entity.js';
+import type { MealAllocation } from '../../community-meals/entities/meal-allocation.entity.js';
 import { PaymentStatus } from '../enums/payment-status.enum.js';
 import { PaymentMethod } from '../enums/payment-method.enum.js';
 
 @Entity('payments')
+@Check('CHK_payment_target', '"orderId" IS NOT NULL OR "allocationId" IS NOT NULL')
 @Index('IDX_unique_successful_payment', ['orderId'], {
+  unique: true,
+  where: "status IN ('AUTHORIZED', 'CAPTURED', 'REFUND_PENDING', 'REFUNDED', 'PARTIALLY_REFUNDED')"
+})
+@Index('IDX_unique_successful_alloc_payment', ['allocationId'], {
   unique: true,
   where: "status IN ('AUTHORIZED', 'CAPTURED', 'REFUND_PENDING', 'REFUNDED', 'PARTIALLY_REFUNDED')"
 })
@@ -13,12 +19,19 @@ export class Payment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ nullable: true })
   orderId: string;
 
   @ManyToOne('Order', { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'orderId' })
   order: Relation<Order>;
+
+  @Column({ nullable: true })
+  allocationId: string;
+
+  @ManyToOne('MealAllocation', { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'allocationId' })
+  allocation: Relation<MealAllocation>;
 
   @Column({ type: 'numeric', precision: 14, scale: 2 })
   amount: number;

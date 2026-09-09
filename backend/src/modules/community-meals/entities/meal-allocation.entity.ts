@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn, type Relation } from 'typeorm';
+import type { Point } from 'geojson';
 import { MealAllocationStatus } from '../enums/meal-allocation-status.enum.js';
 import type { CommunityMealRequest } from './community-meal-request.entity.js';
 import type { CommunityMealOffer } from './community-meal-offer.entity.js';
@@ -37,6 +38,27 @@ export class MealAllocation {
 
   @Column({ nullable: true })
   paymentSessionId: string;
+
+  @Column({ nullable: true, unique: true })
+  orderId: string;
+
+  @ManyToOne('Order', { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'orderId' })
+  order: Relation<any>; // Using any to avoid circular import or just import Order
+
+  @Column({ nullable: true })
+  deliveryAddressLabel: string;
+
+  @Column({ nullable: true })
+  deliveryAddressLine: string;
+
+  @Column({
+    type: 'geography',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true
+  })
+  deliveryLocation: Point;
 
   @Column({ nullable: true, type: 'timestamptz' })
   expiresAt: Date;

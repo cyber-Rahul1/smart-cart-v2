@@ -11,6 +11,7 @@ import { User } from '../../users/entities/user.entity.js';
 import { Shop } from '../../shops/entities/shop.entity.js';
 import { ALL_ENTITIES } from '../../../core/database/entities.js';
 import { BullModule, getQueueToken } from '@nestjs/bullmq';
+import { PaymentsService } from '../../payments/payments.service.js';
 import { CommunityMealRequestStatus } from '../enums/community-meal-request-status.enum.js';
 import { CommunityMealClusterStatus } from '../enums/community-meal-cluster-status.enum.js';
 import { CommunityMealOfferStatus } from '../enums/community-meal-offer-status.enum.js';
@@ -59,7 +60,14 @@ describe('Meal Allocations (Integration)', () => {
           name: 'community-meals-expiration',
         }),
       ],
-      providers: [MealAllocationsService, ReservationExpiryProcessor],
+      providers: [
+        MealAllocationsService,
+        ReservationExpiryProcessor,
+        {
+          provide: PaymentsService,
+          useValue: { initiateAllocationPayment: vi.fn() },
+        }
+      ],
     }).compile();
 
     allocationsService = moduleRef.get(MealAllocationsService);

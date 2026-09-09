@@ -9,9 +9,13 @@ import { ReconciliationService } from './reconciliation.service.js';
 import { Payment } from './entities/payment.entity.js';
 import { WebhookEvent } from './entities/webhook-event.entity.js';
 import { Order } from '../orders/entities/order.entity.js';
+import { OrdersModule } from '../orders/orders.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Payment, WebhookEvent, Order])],
+  imports: [
+    TypeOrmModule.forFeature([Payment, WebhookEvent, Order]),
+    OrdersModule,
+  ],
   controllers: [PaymentsController, WebhooksController],
   providers: [PaymentsService, WebhooksService, RazorpayProvider, ReconciliationService],
   exports: [PaymentsService, RazorpayProvider],

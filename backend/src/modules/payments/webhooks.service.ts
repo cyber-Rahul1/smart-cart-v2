@@ -8,6 +8,10 @@ import { RazorpayProvider } from './providers/razorpay.provider.js';
 import { PaymentStatus } from './enums/payment-status.enum.js';
 import { OrderStatus } from '../orders/enums/order-status.enum.js';
 import { OrderStateMachine } from '../orders/orders.state-machine.js';
+import { MealAllocation } from '../community-meals/entities/meal-allocation.entity.js';
+import { CommunityMealOffer } from '../community-meals/entities/community-meal-offer.entity.js';
+import { MealAllocationStatus } from '../community-meals/enums/meal-allocation-status.enum.js';
+import { OrdersService } from '../orders/orders.service.js';
 
 @Injectable()
 export class WebhooksService {
@@ -20,6 +24,7 @@ export class WebhooksService {
     private readonly paymentRepo: Repository<Payment>,
     private readonly dataSource: DataSource,
     private readonly razorpayProvider: RazorpayProvider,
+    private readonly ordersService: OrdersService,
   ) {}
 
   async processWebhook(signature: string, eventId: string | undefined, rawBody: Buffer, payload: unknown) {
@@ -66,44 +71,118 @@ export class WebhooksService {
           throw new BadRequestException(`Payment with provider order ID ${parsedEvent.providerOrderId} not found`);
         }
 
-        // Lock the associated order
-        const order = await manager.findOne(Order, {
-          where: { id: payment.orderId },
-          lock: { mode: 'pessimistic_write' },
-        });
+        if (payment.orderId) {
+          // RETAIL ORDER PAYMENT
+          const order = await manager.findOne(Order, {
+            where: { id: payment.orderId },
+            lock: { mode: 'pessimistic_write' },
+          });
 
-        if (!order) {
-          throw new InternalServerErrorException(`Order ${payment.orderId} not found`);
-        }
-
-        if (
-          (payment.status === PaymentStatus.CAPTURED || payment.status === PaymentStatus.REFUNDED || payment.status === PaymentStatus.REFUND_PENDING) &&
-          (parsedEvent.status === PaymentStatus.FAILED || parsedEvent.status === PaymentStatus.PENDING)
-        ) {
-          this.logger.warn(`Ignoring stale event updating status to ${parsedEvent.status} for already successful/refunded payment ${payment.id}`);
-        } else if (order.status === OrderStatus.CANCELLED && parsedEvent.status === PaymentStatus.CAPTURED) {
-          this.logger.warn(`Payment captured for already cancelled order ${order.id} - ignoring order state transition`);
-          payment.status = parsedEvent.status;
-        } else {
-          payment.status = parsedEvent.status;
-        }
-
-        if (parsedEvent.providerPaymentId) {
-          payment.providerPaymentId = parsedEvent.providerPaymentId;
-        }
-        await manager.save(payment);
-
-        if (parsedEvent.status === PaymentStatus.CAPTURED) {
-          if (order.status === OrderStatus.PAYMENT_PENDING) {
-            OrderStateMachine.validateTransition(order.status, OrderStatus.PLACED);
-            order.status = OrderStatus.PLACED;
-            await manager.save(order);
+          if (!order) {
+            throw new InternalServerErrorException(`Order ${payment.orderId} not found`);
           }
-        } else if (parsedEvent.status === PaymentStatus.FAILED) {
-          if (order.status === OrderStatus.PAYMENT_PENDING) {
-            OrderStateMachine.validateTransition(order.status, OrderStatus.PAYMENT_FAILED);
-            order.status = OrderStatus.PAYMENT_FAILED;
-            await manager.save(order);
+
+          if (
+            (payment.status === PaymentStatus.CAPTURED || payment.status === PaymentStatus.REFUNDED || payment.status === PaymentStatus.REFUND_PENDING) &&
+            (parsedEvent.status === PaymentStatus.FAILED || parsedEvent.status === PaymentStatus.PENDING)
+          ) {
+            this.logger.warn(`Ignoring stale event updating status to ${parsedEvent.status} for already successful/refunded payment ${payment.id}`);
+          } else if (order.status === OrderStatus.CANCELLED && parsedEvent.status === PaymentStatus.CAPTURED) {
+            this.logger.warn(`Payment captured for already cancelled order ${order.id} - ignoring order state transition`);
+            payment.status = parsedEvent.status;
+          } else {
+            payment.status = parsedEvent.status;
+          }
+
+          if (parsedEvent.providerPaymentId) {
+            payment.providerPaymentId = parsedEvent.providerPaymentId;
+          }
+          await manager.save(payment);
+
+          if (parsedEvent.status === PaymentStatus.CAPTURED) {
+            if (order.status === OrderStatus.PAYMENT_PENDING) {
+              OrderStateMachine.validateTransition(order.status, OrderStatus.PLACED);
+              order.status = OrderStatus.PLACED;
+              await manager.save(order);
+            }
+          } else if (parsedEvent.status === PaymentStatus.FAILED) {
+            if (order.status === OrderStatus.PAYMENT_PENDING) {
+              OrderStateMachine.validateTransition(order.status, OrderStatus.PAYMENT_FAILED);
+              order.status = OrderStatus.PAYMENT_FAILED;
+              await manager.save(order);
+            }
+          }
+        } else if (payment.allocationId) {
+          // COMMUNITY MEAL ALLOCATION PAYMENT
+          // Lock hierarchy: Payment -> MealAllocation -> CommunityMealOffer
+          const MealAllocation = import('../community-meals/entities/meal-allocation.entity.js').MealAllocation;
+          const allocation = await manager.findOne(MealAllocation, {
+            where: { id: payment.allocationId },
+            lock: { mode: 'pessimistic_write' },
+            relations: { request: true, offer: true }
+          });
+
+          if (!allocation) {
+            throw new InternalServerErrorException(`Allocation ${payment.allocationId} not found`);
+          }
+
+          const CommunityMealOffer = import('../community-meals/entities/community-meal-offer.entity.js').CommunityMealOffer;
+          const offer = await manager.findOne(CommunityMealOffer, {
+            where: { id: allocation.offerId },
+            lock: { mode: 'pessimistic_write' }
+          });
+
+          // Handle stale webhook logic
+          if (
+            (payment.status === PaymentStatus.CAPTURED || payment.status === PaymentStatus.REFUNDED || payment.status === PaymentStatus.REFUND_PENDING) &&
+            (parsedEvent.status === PaymentStatus.FAILED || parsedEvent.status === PaymentStatus.PENDING)
+          ) {
+            this.logger.warn(`Ignoring stale event for allocation payment ${payment.id}`);
+          } else {
+            payment.status = parsedEvent.status;
+            if (parsedEvent.providerPaymentId) {
+              payment.providerPaymentId = parsedEvent.providerPaymentId;
+            }
+            // If captured and cancelled, edge case
+            if (parsedEvent.status === PaymentStatus.CAPTURED && allocation.status === MealAllocationStatus.CANCELLED) {
+               // Must process a refund event instead (just logged here for now)
+               this.logger.error(`Allocation ${allocation.id} was cancelled before payment captured. Refund needed.`);
+               await manager.save(payment);
+            } else if (parsedEvent.status === PaymentStatus.CAPTURED && allocation.status === MealAllocationStatus.RESERVED) {
+               // 1. Synthesize Order
+               const ordersService = this.ordersService;
+               const synthesizedOrder = await ordersService.createSynthesizedOrder({
+                 customerId: allocation.userId,
+                 shopId: allocation.offer.shopId,
+                 subtotal: Number(payment.amount),
+                 totalAmount: Number(payment.amount),
+                 deliveryAddressLabel: allocation.deliveryAddressLabel,
+                 deliveryAddressLine: allocation.deliveryAddressLine,
+                 deliveryLocation: allocation.deliveryLocation,
+                 productNameSnapshot: 'Community Meal: ' + offer!.name,
+                 unitPriceSnapshot: Number(allocation.offer.pricePerServing),
+                 quantity: allocation.request.servings,
+                 lineTotal: Number(payment.amount),
+               }, manager);
+
+               // 2. Link Payment
+               payment.orderId = synthesizedOrder.id;
+               await manager.save(payment);
+
+               // 3. Update Allocation
+               allocation.status = MealAllocationStatus.CONFIRMED;
+               allocation.orderId = synthesizedOrder.id;
+               await manager.save(allocation);
+
+               // 4. Update Capacity
+               offer!.committedQty += allocation.request.servings;
+               offer!.reservedQty -= allocation.request.servings;
+               await manager.save(offer!);
+            } else if (parsedEvent.status === PaymentStatus.FAILED) {
+               await manager.save(payment);
+            } else {
+               await manager.save(payment);
+            }
           }
         }
 

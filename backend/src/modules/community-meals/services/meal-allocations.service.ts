@@ -11,6 +11,10 @@ import { MealAllocationStatus } from '../enums/meal-allocation-status.enum.js';
 import { CommunityMealRequestStatus } from '../enums/community-meal-request-status.enum.js';
 import { CommunityMealClusterStatus } from '../enums/community-meal-cluster-status.enum.js';
 import { CommunityMealOfferStatus } from '../enums/community-meal-offer-status.enum.js';
+import { Address } from '../../users/entities/address.entity.js';
+import { PaymentsService } from '../../payments/payments.service.js';
+import { InitiateAllocationPaymentDto } from '../dto/initiate-allocation-payment.dto.js';
+import { MoneyUtil } from '../../../core/utils/money.util.js';
 
 @Injectable()
 export class MealAllocationsService {
@@ -25,9 +29,12 @@ export class MealAllocationsService {
     private readonly allocationRepo: Repository<MealAllocation>,
     @InjectRepository(CommunityMealCluster)
     private readonly clusterRepo: Repository<CommunityMealCluster>,
+    @InjectRepository(Address)
+    private readonly addressRepo: Repository<Address>,
     @InjectQueue('community-meals-allocations')
     private readonly allocationsQueue: Queue,
     private readonly dataSource: DataSource,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async createAllocation(userId: string, requestId: string, offerId: string): Promise<MealAllocation> {
@@ -146,5 +153,59 @@ export class MealAllocationsService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async initiatePayment(
+    userId: string,
+    allocationId: string,
+    dto: InitiateAllocationPaymentDto,
+    idempotencyKey: string,
+  ) {
+    const allocation = await this.allocationRepo.findOne({
+      where: { id: allocationId, userId },
+      relations: { request: true, offer: true },
+    });
+
+    if (!allocation) {
+      throw new NotFoundException('Allocation not found');
+    }
+
+    if (allocation.status !== MealAllocationStatus.RESERVED) {
+      if (allocation.status === MealAllocationStatus.CONFIRMED || allocation.status === MealAllocationStatus.SYNTHESIZED || allocation.status === MealAllocationStatus.DELIVERED) {
+        throw new ConflictException('Allocation is already confirmed or delivered');
+      }
+      if (allocation.status === MealAllocationStatus.CANCELLED) {
+        throw new ConflictException('Allocation is cancelled or expired');
+      }
+    }
+
+    // Address verification
+    const address = await this.addressRepo.findOne({ where: { id: dto.addressId } });
+    if (!address) {
+      throw new NotFoundException('Address not found');
+    }
+    if (address.userId !== userId) {
+      throw new ForbiddenException('Address does not belong to you');
+    }
+
+    // Calculate authoritative amount
+    const totalMinorUnits = MoneyUtil.toMinorUnit(allocation.offer.pricePerServing) * allocation.request.servings;
+    const totalAmount = MoneyUtil.toDecimal(totalMinorUnits);
+
+    // Call payment service
+    const result = await this.paymentsService.initiateAllocationPayment(
+      allocation.id,
+      totalAmount,
+      dto.paymentMethod,
+      idempotencyKey,
+    );
+
+    // Snapshot address before returning
+    allocation.deliveryAddressLabel = address.label;
+    allocation.deliveryAddressLine = address.addressLine;
+    allocation.deliveryLocation = address.location;
+    await this.allocationRepo.save(allocation);
+
+    return result;
   }
 }

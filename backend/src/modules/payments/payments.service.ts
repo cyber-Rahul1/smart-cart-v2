@@ -163,6 +163,103 @@ export class PaymentsService {
     });
   }
 
+  async initiateAllocationPayment(
+    allocationId: string,
+    amount: number, // Decimal amount
+    paymentMethod: PaymentMethod,
+    idempotencyKey: string,
+  ): Promise<any> {
+    const requestPayloadHash = crypto.createHash('sha256').update(JSON.stringify({ allocationId, paymentMethod })).digest('hex');
+
+    // 1. Check for successful payments
+    const successfulPayment = await this.paymentRepo.findOne({
+      where: [
+        { allocationId, status: PaymentStatus.AUTHORIZED },
+        { allocationId, status: PaymentStatus.CAPTURED },
+        { allocationId, status: PaymentStatus.REFUND_PENDING },
+        { allocationId, status: PaymentStatus.REFUNDED },
+        { allocationId, status: PaymentStatus.PARTIALLY_REFUNDED },
+      ],
+    });
+
+    if (successfulPayment) {
+      throw new ConflictException('Allocation already has a successful payment');
+    }
+
+    // 2. Idempotency Check
+    const existingAttempt = await this.paymentRepo.findOne({
+      where: { allocationId, idempotencyKey },
+    });
+
+    if (existingAttempt) {
+      if (existingAttempt.requestPayloadHash !== requestPayloadHash) {
+        throw new ConflictException('Idempotency conflict: A request with the same key but different payload was already processed');
+      }
+      if (existingAttempt.status === PaymentStatus.PENDING) {
+        return {
+          paymentId: existingAttempt.id,
+          providerOrderId: existingAttempt.providerOrderId,
+          status: existingAttempt.status,
+          paymentMethod: existingAttempt.paymentMethod,
+        };
+      }
+      return {
+        paymentId: existingAttempt.id,
+        providerOrderId: existingAttempt.providerOrderId,
+        status: existingAttempt.status,
+        paymentMethod: existingAttempt.paymentMethod,
+      };
+    }
+
+    // 3. Create new payment attempt in a transaction
+    return this.dataSource.transaction(async (manager) => {
+      const amountInMinorUnits = MoneyUtil.toMinorUnit(amount);
+      
+      let providerOrderId: string | null = null;
+      let paymentStatus = PaymentStatus.CREATED;
+
+      if (paymentMethod === PaymentMethod.ONLINE) {
+        // We do not have an orderId yet, so pass a dummy or allocation ID as receipt
+        const session = await this.razorpayProvider.createPaymentSession(
+          amountInMinorUnits,
+          'INR',
+          allocationId,
+        );
+        providerOrderId = session.providerOrderId;
+        paymentStatus = PaymentStatus.PENDING;
+      } else {
+         throw new BadRequestException('COD not supported for community meals');
+      }
+
+      const payment = manager.create(Payment, {
+        allocationId,
+        amount,
+        currency: 'INR',
+        paymentMethod,
+        provider: 'RAZORPAY',
+        providerOrderId: providerOrderId || undefined,
+        idempotencyKey,
+        requestPayloadHash,
+        status: paymentStatus,
+      });
+
+      try {
+        const savedPayment = await manager.save(payment);
+        return {
+          paymentId: savedPayment.id,
+          providerOrderId: savedPayment.providerOrderId,
+          status: savedPayment.status,
+          paymentMethod: savedPayment.paymentMethod,
+        };
+      } catch (error: any) {
+        if (error instanceof QueryFailedError && error.message.includes('unique')) {
+          throw new ConflictException('Concurrent payment initiation conflict');
+        }
+        throw error;
+      }
+    });
+  }
+
   async initiateRefund(orderId: string, reason: string): Promise<any> {
     const idempotencyKey = `refund:${orderId}`;
 

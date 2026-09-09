@@ -202,6 +202,63 @@ export class OrdersService {
     return this.mapToDto(order);
   }
 
+  async createSynthesizedOrder(
+    dto: {
+      customerId: string;
+      shopId: string;
+      idempotencyKey?: string;
+      requestPayloadHash?: string;
+      subtotal: number;
+      totalAmount: number;
+      deliveryAddressLabel: string;
+      deliveryAddressLine: string;
+      deliveryLocation: any;
+      productNameSnapshot: string;
+      unitPriceSnapshot: number;
+      quantity: number;
+      lineTotal: number;
+    },
+    manager: import('typeorm').EntityManager,
+  ): Promise<Order> {
+    const orderItems: Partial<OrderItem>[] = [
+      {
+        productId: null,
+        productNameSnapshot: dto.productNameSnapshot,
+        unitPriceSnapshot: dto.unitPriceSnapshot,
+        quantity: dto.quantity,
+        lineTotal: dto.lineTotal,
+      },
+    ];
+
+    const order = manager.create(Order, {
+      customerId: dto.customerId,
+      shopId: dto.shopId,
+      idempotencyKey: dto.idempotencyKey,
+      requestPayloadHash: dto.requestPayloadHash,
+      status: OrderStatus.PLACED, // Order is already paid
+      subtotal: dto.subtotal,
+      deliveryFee: 0,
+      totalAmount: dto.totalAmount,
+      deliveryAddressLabel: dto.deliveryAddressLabel,
+      deliveryAddressLine: dto.deliveryAddressLine,
+      deliveryLocation: dto.deliveryLocation,
+      items: orderItems as any,
+    });
+
+    const savedOrder = await manager.save(Order, order);
+
+    const auditLog = manager.create(AuditLog, {
+      entityType: 'Order',
+      entityId: savedOrder.id,
+      action: 'CREATED_SYNTHESIZED',
+      newState: { status: savedOrder.status },
+      performedBy: 'SYSTEM',
+    });
+    await manager.save(AuditLog, auditLog);
+
+    return savedOrder;
+  }
+
   async cancelOrder(userId: string, orderId: string, reason?: string): Promise<OrderResponseDto> {
     // 1. Fetch current order
     const order = await this.orderRepo.findOne({ where: { id: orderId, customerId: userId } });

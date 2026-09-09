@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
+import { Address } from '../users/entities/address.entity.js';
+import { PaymentsModule } from '../payments/payments.module.js';
 import { CommunityMealRequestsController } from './controllers/community-meal-requests.controller.js';
 import { CommunityMealClustersController } from './controllers/community-meal-clusters.controller.js';
 import { CommunityMealRequestsService } from './services/community-meal-requests.service.js';
@@ -20,7 +22,7 @@ import { CustomerCommunityMealOffersController } from './controllers/customer-co
 import { KitchenEligibilityService } from './services/kitchen-eligibility.service.js';
 import { CommunityMealOffersService } from './services/community-meal-offers.service.js';
 import { MealAllocationsService } from './services/meal-allocations.service.js';
-import { CustomerMealAllocationsController } from './controllers/customer-meal-allocations.controller.js';
+import { CustomerMealAllocationsController, CustomerAllocationPaymentsController } from './controllers/customer-meal-allocations.controller.js';
 import { ReservationExpiryProcessor } from './processors/reservation-expiry.processor.js';
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { ReservationExpiryProcessor } from './processors/reservation-expiry.proc
       MealMenuLedger,
       KitchenCompliance,
       Shop,
+      Address,
     ]),
     BullModule.registerQueue({
       name: 'community-meals-clustering',
@@ -43,6 +46,7 @@ import { ReservationExpiryProcessor } from './processors/reservation-expiry.proc
     BullModule.registerQueue({
       name: 'community-meals-allocations',
     }),
+    PaymentsModule,
   ],
   controllers: [
     CommunityMealRequestsController, 
@@ -50,6 +54,7 @@ import { ReservationExpiryProcessor } from './processors/reservation-expiry.proc
     KitchenCommunityMealsController,
     CustomerCommunityMealOffersController,
     CustomerMealAllocationsController,
+    CustomerAllocationPaymentsController,
   ],
   providers: [
     CommunityMealRequestsService,
