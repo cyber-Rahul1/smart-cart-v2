@@ -6,6 +6,9 @@ import { MealAllocation } from '../entities/meal-allocation.entity.js';
 import { MealConversation } from '../entities/meal-conversation.entity.js';
 import { AuditLog } from '../../audit/entities/audit-log.entity.js';
 import { MealMenuLedgerStatus } from '../enums/meal-menu-ledger-status.enum.js';
+import { LedgerEventPublisher } from '../events/ledger-event.publisher.js';
+import { LedgerLockSchedulerService } from './ledger-lock-scheduler.service.js';
+import { LockResult } from '../enums/lock-result.enum.js';
 
 @Injectable()
 export class CommunityMealMenuLedgerService {
@@ -17,6 +20,8 @@ export class CommunityMealMenuLedgerService {
     @InjectRepository(AuditLog)
     private readonly auditLogRepo: Repository<AuditLog>,
     private readonly dataSource: DataSource,
+    private readonly eventPublisher: LedgerEventPublisher,
+    private readonly scheduler: LedgerLockSchedulerService,
   ) {}
 
   async getLedger(allocationId: string, userId: string): Promise<MealMenuLedger> {
@@ -71,7 +76,7 @@ export class CommunityMealMenuLedgerService {
       throw new BadRequestException('Invalid allergens format');
     }
     
-    return this.dataSource.transaction(async (manager) => {
+    const finalLedger = await this.dataSource.transaction(async (manager) => {
       // Use explicit conditional update to enforce invariant
       const updateResult = await manager.createQueryBuilder()
         .update(MealMenuLedger)
@@ -102,7 +107,14 @@ export class CommunityMealMenuLedgerService {
       await manager.save(audit);
 
       return updatedLedger as MealMenuLedger;
-    }) as Promise<MealMenuLedger>;
+    });
+
+    if (finalLedger.menuLockAt) {
+      await this.scheduler.scheduleLock(finalLedger.id, finalLedger.version, finalLedger.menuLockAt);
+    }
+    await this.eventPublisher.publishEvent('ledger_updated', allocationId, finalLedger);
+
+    return finalLedger;
   }
 
   async confirmLedger(allocationId: string, userId: string, expectedVersion: number): Promise<void> {
@@ -161,50 +173,90 @@ export class CommunityMealMenuLedgerService {
       });
       await manager.save(audit);
     });
+
+    const finalLedger = await this.ledgerRepo.findOne({ where: { id: ledger.id } });
+    if (finalLedger) {
+      await this.eventPublisher.publishEvent('ledger_updated', allocationId, finalLedger);
+    }
   }
 
-  async lockExpiredLedger(ledgerId: string): Promise<void> {
-    await this.dataSource.transaction(async (manager) => {
-      const ledger = await manager.findOne(MealMenuLedger, { where: { id: ledgerId } });
-      if (!ledger) {
-        throw new NotFoundException('Ledger not found');
-      }
+  async getLedgerInternal(ledgerId: string): Promise<MealMenuLedger | null> {
+    return this.ledgerRepo.findOne({ where: { id: ledgerId } });
+  }
 
-      if (ledger.status === MealMenuLedgerStatus.LOCKED) {
-        return; // Idempotent
-      }
+  async autoLock(ledgerId: string, expectedVersion: number): Promise<LockResult> {
+    const ledger = await this.ledgerRepo.findOne({ where: { id: ledgerId } });
+    if (!ledger) {
+      return LockResult.NOT_FOUND;
+    }
 
-      const updateResult = await manager.createQueryBuilder()
-        .update(MealMenuLedger)
-        .set({
-          status: MealMenuLedgerStatus.LOCKED,
-          finalizedAt: () => 'NOW()',
-          version: () => 'version + 1'
-        })
-        .where('id = :id', { id: ledger.id })
-        .andWhere('status = :status', { status: MealMenuLedgerStatus.DRAFT })
-        .andWhere('"menuLockAt" <= NOW()')
-        .execute();
+    if (ledger.status === MealMenuLedgerStatus.LOCKED) {
+      return LockResult.ALREADY_LOCKED;
+    }
 
-      if ((updateResult.affected ?? 0) > 0) {
-        const updatedLedger = await manager.findOne(MealMenuLedger, { where: { id: ledger.id } });
+    if (ledger.status !== MealMenuLedgerStatus.DRAFT) {
+      return LockResult.ALREADY_FINALIZED;
+    }
 
-        await manager.createQueryBuilder()
-          .update(MealConversation)
-          .set({ status: 'READ_ONLY' })
-          .where('allocationId = :allocationId', { allocationId: ledger.allocationId })
+    if (ledger.version !== expectedVersion) {
+      return LockResult.STALE_JOB;
+    }
+
+    if (ledger.menuLockAt && ledger.menuLockAt > new Date()) {
+      return LockResult.TOO_EARLY;
+    }
+
+    try {
+      let finalLedger: MealMenuLedger | undefined;
+      await this.dataSource.transaction(async (manager) => {
+        const updateResult = await manager.createQueryBuilder()
+          .update(MealMenuLedger)
+          .set({
+            status: MealMenuLedgerStatus.LOCKED,
+            finalizedAt: () => 'NOW()',
+            version: () => 'version + 1'
+          })
+          .where('id = :id', { id: ledger.id })
+          .andWhere('status = :status', { status: MealMenuLedgerStatus.DRAFT })
+          .andWhere('version = :expectedVersion', { expectedVersion })
+          .andWhere('"menuLockAt" <= NOW()')
           .execute();
 
-        const audit = manager.create(AuditLog, {
-          entityName: 'MealMenuLedger',
-          entityId: ledger.id,
-          action: 'TIMED_LOCK',
-          actorId: 'SYSTEM',
-          oldValues: ledger,
-          newValues: updatedLedger,
-        });
-        await manager.save(audit);
+        if ((updateResult.affected ?? 0) > 0) {
+          const updatedLedger = await manager.findOne(MealMenuLedger, { where: { id: ledger.id } });
+          finalLedger = updatedLedger as MealMenuLedger;
+
+          await manager.createQueryBuilder()
+            .update(MealConversation)
+            .set({ status: 'READ_ONLY' })
+            .where('allocationId = :allocationId', { allocationId: ledger.allocationId })
+            .execute();
+
+          const audit = manager.create(AuditLog, {
+            entityName: 'MealMenuLedger',
+            entityId: ledger.id,
+            action: 'TIMED_LOCK',
+            actorId: 'SYSTEM',
+            oldValues: ledger,
+            newValues: updatedLedger,
+          });
+          await manager.save(audit);
+        }
+      });
+
+      if (finalLedger) {
+        await this.eventPublisher.publishEvent('ledger_locked', finalLedger.allocationId, finalLedger);
+        return LockResult.LOCK_SUCCESS;
+      } else {
+        // If 0 rows affected despite pre-checks, it means race condition modified it
+        const currentLedger = await this.ledgerRepo.findOne({ where: { id: ledger.id } });
+        if (currentLedger?.status === MealMenuLedgerStatus.LOCKED) return LockResult.ALREADY_LOCKED;
+        if (currentLedger?.status !== MealMenuLedgerStatus.DRAFT) return LockResult.ALREADY_FINALIZED;
+        if (currentLedger?.version !== expectedVersion) return LockResult.STALE_JOB;
+        return LockResult.TOO_EARLY; // fallback
       }
-    });
+    } catch (e) {
+      return LockResult.RETRYABLE_FAILURE;
+    }
   }
 }

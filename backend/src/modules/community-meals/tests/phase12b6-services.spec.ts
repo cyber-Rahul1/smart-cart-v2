@@ -3,6 +3,8 @@ import { vi } from 'vitest';
 import { CommunityMealConversationService } from '../services/community-meal-conversation.service.js';
 import { CommunityMealMessagesService } from '../services/community-meal-messages.service.js';
 import { CommunityMealMenuLedgerService } from '../services/community-meal-menu-ledger.service.js';
+import { LedgerEventPublisher } from '../events/ledger-event.publisher.js';
+import { LedgerLockSchedulerService } from '../services/ledger-lock-scheduler.service.js';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MealConversation } from '../entities/meal-conversation.entity.js';
 import { MealMessage } from '../entities/meal-message.entity.js';
@@ -15,6 +17,7 @@ describe('Phase 12B-6 Services Tests', () => {
   let conversationService: CommunityMealConversationService;
   let messagesService: CommunityMealMessagesService;
   let ledgerService: CommunityMealMenuLedgerService;
+  let eventPublisher: any;
 
   let mockConversationRepo: any;
   let mockMessageRepo: any;
@@ -59,6 +62,9 @@ describe('Phase 12B-6 Services Tests', () => {
         CommunityMealConversationService,
         CommunityMealMessagesService,
         CommunityMealMenuLedgerService,
+        { provide: LedgerEventPublisher, useValue: { publishEvent: vi.fn() } },
+        { provide: LedgerLockSchedulerService, useValue: { scheduleLock: vi.fn() } },
+        CommunityMealMenuLedgerService,
         { provide: getRepositoryToken(MealConversation), useValue: mockConversationRepo },
         { provide: getRepositoryToken(MealMessage), useValue: mockMessageRepo },
         { provide: getRepositoryToken(MealMenuLedger), useValue: mockLedgerRepo },
@@ -71,6 +77,7 @@ describe('Phase 12B-6 Services Tests', () => {
     conversationService = module.get<CommunityMealConversationService>(CommunityMealConversationService);
     messagesService = module.get<CommunityMealMessagesService>(CommunityMealMessagesService);
     ledgerService = module.get<CommunityMealMenuLedgerService>(CommunityMealMenuLedgerService);
+    eventPublisher = module.get<LedgerEventPublisher>(LedgerEventPublisher);
   });
 
   const mockAllocation = { id: 'alloc-1', userId: 'user-1', offer: { shop: { ownerId: 'shop-1' } } };
@@ -134,6 +141,23 @@ describe('Phase 12B-6 Services Tests', () => {
 
       const msg = await messagesService.sendMessage('user-1', 'conv-1', 'hello', 'idem-1');
       expect(msg.id).toBe('msg-exist');
+    });
+
+    it('should complete DB transaction successfully even if Redis publish fails', async () => {
+      mockConversationRepo.findOne.mockResolvedValue({ id: 'conv-1', allocationId: 'alloc-1', status: 'ACTIVE' });
+      mockAllocationRepo.findOne.mockResolvedValue(mockAllocation);
+      mockMessageRepo.save.mockResolvedValue({ id: 'msg-1', content: 'hello' });
+      
+      const mockRedis = {
+        publish: vi.fn().mockRejectedValueOnce(new Error('Redis connection lost'))
+      };
+      const realPublisher = new LedgerEventPublisher(mockRedis as any);
+      (messagesService as any).eventPublisher = realPublisher;
+
+      const msg = await messagesService.sendMessage('user-1', 'conv-1', 'hello');
+      expect(msg.id).toBe('msg-1');
+      expect(mockMessageRepo.save).toHaveBeenCalled();
+      expect(mockRedis.publish).toHaveBeenCalled();
     });
   });
 
@@ -201,8 +225,7 @@ describe('Phase 12B-6 Services Tests', () => {
       };
       mockDataSource.transaction.mockImplementation((cb: any) => cb(mockManager));
       
-      await expect(ledgerService.lockExpiredLedger('led-1')).resolves.not.toThrow();
+      await expect(ledgerService.autoLock('led-1', 1)).resolves.not.toThrow();
     });
   });
-}
-);
+});

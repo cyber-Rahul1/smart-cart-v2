@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
 import { Address } from '../users/entities/address.entity.js';
 import { PaymentsModule } from '../payments/payments.module.js';
+import { AuthModule } from '../auth/auth.module.js';
 import { CommunityMealRequestsController } from './controllers/community-meal-requests.controller.js';
 import { CommunityMealClustersController } from './controllers/community-meal-clusters.controller.js';
 import { CommunityMealRequestsService } from './services/community-meal-requests.service.js';
@@ -32,6 +33,11 @@ import { ReservationExpiryProcessor } from './processors/reservation-expiry.proc
 import { CommunityMealConversationController } from './controllers/community-meal-conversation.controller.js';
 import { CommunityMealMessageController } from './controllers/community-meal-message.controller.js';
 import { CommunityMealLedgerController } from './controllers/community-meal-ledger.controller.js';
+import { LedgerEventPublisher } from './events/ledger-event.publisher.js';
+import { LedgerLockSchedulerService } from './services/ledger-lock-scheduler.service.js';
+import { WsRateLimitService } from './services/ws-rate-limit.service.js';
+import { CommunityMealGateway } from './gateways/community-meal.gateway.js';
+import { LedgerLockProcessor } from './processors/ledger-lock.processor.js';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -56,7 +62,11 @@ import { CommunityMealLedgerController } from './controllers/community-meal-ledg
     BullModule.registerQueue({
       name: 'community-meals-allocations',
     }),
+    BullModule.registerQueue({
+      name: 'ledgerLockQueue',
+    }),
     PaymentsModule,
+    AuthModule,
   ],
   controllers: [
     CommunityMealRequestsController, 
@@ -81,6 +91,11 @@ import { CommunityMealLedgerController } from './controllers/community-meal-ledg
     CommunityMealConversationService,
     CommunityMealMessagesService,
     CommunityMealMenuLedgerService,
+    LedgerEventPublisher,
+    LedgerLockSchedulerService,
+    WsRateLimitService,
+    CommunityMealGateway,
+    LedgerLockProcessor,
   ],
   exports: [CommunityMealRequestsService, CommunityMealClusteringService, KitchenEligibilityService, CommunityMealOffersService, MealAllocationsService],
 })

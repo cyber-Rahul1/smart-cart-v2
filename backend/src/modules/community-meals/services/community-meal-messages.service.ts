@@ -4,6 +4,7 @@ import { Repository, QueryFailedError } from 'typeorm';
 import { MealMessage, MealMessageSenderRole } from '../entities/meal-message.entity.js';
 import { MealConversation } from '../entities/meal-conversation.entity.js';
 import { CommunityMealConversationService } from './community-meal-conversation.service.js';
+import { LedgerEventPublisher } from '../events/ledger-event.publisher.js';
 
 @Injectable()
 export class CommunityMealMessagesService {
@@ -13,6 +14,7 @@ export class CommunityMealMessagesService {
     @InjectRepository(MealConversation)
     private readonly conversationRepo: Repository<MealConversation>,
     private readonly conversationService: CommunityMealConversationService,
+    private readonly eventPublisher: LedgerEventPublisher,
   ) {}
 
   async sendMessage(userId: string, conversationId: string, content: string, idempotencyKey?: string): Promise<MealMessage> {
@@ -54,6 +56,9 @@ export class CommunityMealMessagesService {
       }
       throw error;
     }
+
+    // Publish the event AFTER successful commit
+    await this.eventPublisher.publishEvent('new_message', conversation.allocationId, message);
 
     return message;
   }
