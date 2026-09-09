@@ -25,6 +25,7 @@ import { TrackingModule } from './modules/tracking/tracking.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 
 import { OutboxModule } from './modules/outbox/outbox.module.js';
+import { FinancialsModule } from './modules/financials/financials.module.js';
 import { ShopkeeperOrdersModule } from './modules/shopkeeper-orders/shopkeeper-orders.module.js';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
@@ -78,6 +79,7 @@ import { CommunityMealsModule } from './modules/community-meals/community-meals.
     OrdersModule,
     PaymentsModule,
     OutboxModule,
+    FinancialsModule,
     ShopkeeperOrdersModule,
     CommunityMealsModule,
   ],
@@ -90,4 +92,4 @@ import { CommunityMealsModule } from './modules/community-meals/community-meals.
     },
   ],
 })
-export class AppModule {}
+export class AppModule { }
