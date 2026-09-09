@@ -7,6 +7,7 @@ import { CommunityMealClusteringService } from '../services/community-meal-clust
 import { CommunityMealOffer } from '../entities/community-meal-offer.entity.js';
 import { CommunityMealCluster } from '../entities/community-meal-cluster.entity.js';
 import { Shop } from '../../shops/entities/shop.entity.js';
+import { ShopStatus } from '../../shops/enums/shop-status.enum.js';
 import { KitchenCompliance } from '../entities/kitchen-compliance.entity.js';
 import { User } from '../../users/entities/user.entity.js';
 import { CommunityMealOfferStatus } from '../enums/community-meal-offer-status.enum.js';
@@ -79,7 +80,7 @@ describe('Community Meal Offers Service (Integration)', () => {
     const shop = await shopRepo.save(shopRepo.create({
       ownerId: user.id,
       name: 'Offer Kitchen',
-      status: 'ACTIVE',
+      status: ShopStatus.ACTIVE,
       location: { type: 'Point', coordinates: [0, 0] },
     }));
 
@@ -89,13 +90,13 @@ describe('Community Meal Offers Service (Integration)', () => {
     const cluster = await clusterRepo.save(clusterRepo.create({
       cuisine: 'Indian',
       mealType: 'LUNCH',
-      dietaryRestrictions: [],
+      dietaryRestrictions: '',
       spiceLevel: 'MEDIUM',
       centroid: { type: 'Point', coordinates: [0, 0] },
       status: CommunityMealClusterStatus.OFFERING,
       timeWindowStart: new Date(Date.now() + 3600000),
       timeWindowEnd: new Date(Date.now() + 7200000),
-      demandCount: 5,
+      minimumThreshold: 5,
     }));
 
     const dto = {
@@ -121,7 +122,7 @@ describe('Community Meal Offers Service (Integration)', () => {
     const shop = await shopRepo.save(shopRepo.create({
       ownerId: user.id,
       name: 'Offer Kitchen 2',
-      status: 'ACTIVE',
+      status: ShopStatus.ACTIVE,
       location: { type: 'Point', coordinates: [0, 0] },
     }));
     vi.spyOn(eligibilityService, 'requireEligibility').mockResolvedValue(undefined);
@@ -129,13 +130,13 @@ describe('Community Meal Offers Service (Integration)', () => {
     const cluster = await clusterRepo.save(clusterRepo.create({
       cuisine: 'Indian',
       mealType: 'LUNCH',
-      dietaryRestrictions: [],
+      dietaryRestrictions: '',
       spiceLevel: 'MEDIUM',
       centroid: { type: 'Point', coordinates: [0, 0] },
       status: CommunityMealClusterStatus.GATHERING_DEMAND, // Wrong state
       timeWindowStart: new Date(Date.now() + 3600000),
       timeWindowEnd: new Date(Date.now() + 7200000),
-      demandCount: 2,
+      minimumThreshold: 2,
     }));
 
     const dto = {
@@ -154,7 +155,7 @@ describe('Community Meal Offers Service (Integration)', () => {
     const shop = await shopRepo.save(shopRepo.create({
       ownerId: user.id,
       name: 'Offer Kitchen 3',
-      status: 'ACTIVE',
+      status: ShopStatus.ACTIVE,
       location: { type: 'Point', coordinates: [0, 0] },
     }));
     vi.spyOn(eligibilityService, 'requireEligibility').mockResolvedValue(undefined);
@@ -162,13 +163,13 @@ describe('Community Meal Offers Service (Integration)', () => {
     const cluster = await clusterRepo.save(clusterRepo.create({
       cuisine: 'Indian',
       mealType: 'LUNCH',
-      dietaryRestrictions: [],
+      dietaryRestrictions: '',
       spiceLevel: 'MEDIUM',
       centroid: { type: 'Point', coordinates: [0, 0] },
       status: CommunityMealClusterStatus.OFFERING,
       timeWindowStart: new Date(Date.now() + 3600000),
       timeWindowEnd: new Date(Date.now() + 7200000),
-      demandCount: 5,
+      minimumThreshold: 5,
     }));
 
     const dto = {
@@ -189,7 +190,7 @@ describe('Community Meal Offers Service (Integration)', () => {
     const shop = await shopRepo.save(shopRepo.create({
       ownerId: user.id,
       name: 'Offer Kitchen 4',
-      status: 'ACTIVE',
+      status: ShopStatus.ACTIVE,
       location: { type: 'Point', coordinates: [0, 0] },
     }));
     vi.spyOn(eligibilityService, 'requireEligibility').mockResolvedValue(undefined);
@@ -197,13 +198,12 @@ describe('Community Meal Offers Service (Integration)', () => {
     const cluster = await clusterRepo.save(clusterRepo.create({
       cuisine: 'Indian',
       mealType: 'LUNCH',
-      dietaryRestrictions: [],
+      dietaryRestrictions: '',
       spiceLevel: 'MEDIUM',
       centroid: { type: 'Point', coordinates: [0, 0] },
       status: CommunityMealClusterStatus.OFFERING,
       timeWindowStart: new Date(Date.now() + 3600000),
       timeWindowEnd: new Date(Date.now() + 7200000),
-      demandCount: 5,
     }));
 
     const dto = {
