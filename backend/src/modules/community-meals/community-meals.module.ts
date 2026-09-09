@@ -19,6 +19,9 @@ import { KitchenCommunityMealsController } from './controllers/kitchen-community
 import { CustomerCommunityMealOffersController } from './controllers/customer-community-meal-offers.controller.js';
 import { KitchenEligibilityService } from './services/kitchen-eligibility.service.js';
 import { CommunityMealOffersService } from './services/community-meal-offers.service.js';
+import { MealAllocationsService } from './services/meal-allocations.service.js';
+import { CustomerMealAllocationsController } from './controllers/customer-meal-allocations.controller.js';
+import { ReservationExpiryProcessor } from './processors/reservation-expiry.processor.js';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -37,12 +40,16 @@ import { CommunityMealOffersService } from './services/community-meal-offers.ser
     BullModule.registerQueue({
       name: 'community-meals-expiration',
     }),
+    BullModule.registerQueue({
+      name: 'community-meals-allocations',
+    }),
   ],
   controllers: [
     CommunityMealRequestsController, 
     CommunityMealClustersController,
     KitchenCommunityMealsController,
     CustomerCommunityMealOffersController,
+    CustomerMealAllocationsController,
   ],
   providers: [
     CommunityMealRequestsService,
@@ -51,7 +58,9 @@ import { CommunityMealOffersService } from './services/community-meal-offers.ser
     CommunityMealOffersService,
     ClusteringProcessor,
     ExpirationProcessor,
+    MealAllocationsService,
+    ReservationExpiryProcessor,
   ],
-  exports: [CommunityMealRequestsService, CommunityMealClusteringService, KitchenEligibilityService, CommunityMealOffersService],
+  exports: [CommunityMealRequestsService, CommunityMealClusteringService, KitchenEligibilityService, CommunityMealOffersService, MealAllocationsService],
 })
 export class CommunityMealsModule {}
