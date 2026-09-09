@@ -18,11 +18,15 @@ import { MealMenuLedger } from './entities/meal-menu-ledger.entity.js';
 import { MealMessage } from './entities/meal-message.entity.js';
 import { KitchenCompliance } from './entities/kitchen-compliance.entity.js';
 import { Shop } from '../shops/entities/shop.entity.js';
+import { AuditLog } from '../audit/entities/audit-log.entity.js';
 import { KitchenCommunityMealsController } from './controllers/kitchen-community-meals.controller.js';
 import { CustomerCommunityMealOffersController } from './controllers/customer-community-meal-offers.controller.js';
 import { KitchenEligibilityService } from './services/kitchen-eligibility.service.js';
 import { CommunityMealOffersService } from './services/community-meal-offers.service.js';
 import { MealAllocationsService } from './services/meal-allocations.service.js';
+import { CommunityMealConversationService } from './services/community-meal-conversation.service.js';
+import { CommunityMealMessagesService } from './services/community-meal-messages.service.js';
+import { CommunityMealMenuLedgerService } from './services/community-meal-menu-ledger.service.js';
 import { CustomerMealAllocationsController, CustomerAllocationPaymentsController } from './controllers/customer-meal-allocations.controller.js';
 import { ReservationExpiryProcessor } from './processors/reservation-expiry.processor.js';
 @Module({
@@ -38,6 +42,7 @@ import { ReservationExpiryProcessor } from './processors/reservation-expiry.proc
       KitchenCompliance,
       Shop,
       Address,
+      AuditLog,
     ]),
     BullModule.registerQueue({
       name: 'community-meals-clustering',
@@ -67,6 +72,9 @@ import { ReservationExpiryProcessor } from './processors/reservation-expiry.proc
     ExpirationProcessor,
     MealAllocationsService,
     ReservationExpiryProcessor,
+    CommunityMealConversationService,
+    CommunityMealMessagesService,
+    CommunityMealMenuLedgerService,
   ],
   exports: [CommunityMealRequestsService, CommunityMealClusteringService, KitchenEligibilityService, CommunityMealOffersService, MealAllocationsService],
 })
