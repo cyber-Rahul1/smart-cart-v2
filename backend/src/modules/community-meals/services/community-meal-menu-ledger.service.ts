@@ -22,7 +22,7 @@ export class CommunityMealMenuLedgerService {
   async getLedger(allocationId: string, userId: string): Promise<MealMenuLedger> {
     const allocation = await this.allocationRepo.findOne({
       where: { id: allocationId },
-      relations: ['offer', 'offer.shop'],
+      relations: { offer: { shop: true } } as any,
     });
 
     if (!allocation) {
@@ -46,7 +46,7 @@ export class CommunityMealMenuLedgerService {
   async kitchenUpdate(allocationId: string, userId: string, updateData: Partial<MealMenuLedger>, expectedVersion: number): Promise<MealMenuLedger> {
     const allocation = await this.allocationRepo.findOne({
       where: { id: allocationId },
-      relations: ['offer', 'offer.shop'],
+      relations: { offer: { shop: true } } as any,
     });
 
     if (!allocation) {
@@ -101,14 +101,14 @@ export class CommunityMealMenuLedgerService {
       });
       await manager.save(audit);
 
-      return updatedLedger;
-    });
+      return updatedLedger as MealMenuLedger;
+    }) as Promise<MealMenuLedger>;
   }
 
   async confirmLedger(allocationId: string, userId: string, expectedVersion: number): Promise<void> {
     const allocation = await this.allocationRepo.findOne({
       where: { id: allocationId },
-      relations: ['offer', 'offer.shop'],
+      relations: { offer: { shop: true } } as any,
     });
 
     if (!allocation) {
@@ -186,7 +186,7 @@ export class CommunityMealMenuLedgerService {
         .andWhere('"menuLockAt" <= NOW()')
         .execute();
 
-      if (updateResult.affected > 0) {
+      if ((updateResult.affected ?? 0) > 0) {
         const updatedLedger = await manager.findOne(MealMenuLedger, { where: { id: ledger.id } });
 
         await manager.createQueryBuilder()

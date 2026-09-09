@@ -16,7 +16,7 @@ export class CommunityMealConversationService {
   async getOrCreateConversation(allocationId: string, userId: string): Promise<MealConversation> {
     const allocation = await this.allocationRepo.findOne({
       where: { id: allocationId },
-      relations: ['offer', 'offer.shop'],
+      relations: { offer: { shop: true } } as any,
     });
 
     if (!allocation) {
@@ -57,7 +57,7 @@ export class CommunityMealConversationService {
   async verifyAccess(allocationId: string, userId: string): Promise<{ role: 'CUSTOMER' | 'SHOPKEEPER' }> {
     const allocation = await this.allocationRepo.findOne({
       where: { id: allocationId },
-      relations: ['offer', 'offer.shop'],
+      relations: { offer: { shop: true } } as any,
     });
 
     if (!allocation) {

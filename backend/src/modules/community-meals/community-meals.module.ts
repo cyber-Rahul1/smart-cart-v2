@@ -29,6 +29,9 @@ import { CommunityMealMessagesService } from './services/community-meal-messages
 import { CommunityMealMenuLedgerService } from './services/community-meal-menu-ledger.service.js';
 import { CustomerMealAllocationsController, CustomerAllocationPaymentsController } from './controllers/customer-meal-allocations.controller.js';
 import { ReservationExpiryProcessor } from './processors/reservation-expiry.processor.js';
+import { CommunityMealConversationController } from './controllers/community-meal-conversation.controller.js';
+import { CommunityMealMessageController } from './controllers/community-meal-message.controller.js';
+import { CommunityMealLedgerController } from './controllers/community-meal-ledger.controller.js';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -62,6 +65,9 @@ import { ReservationExpiryProcessor } from './processors/reservation-expiry.proc
     CustomerCommunityMealOffersController,
     CustomerMealAllocationsController,
     CustomerAllocationPaymentsController,
+    CommunityMealConversationController,
+    CommunityMealMessageController,
+    CommunityMealLedgerController,
   ],
   providers: [
     CommunityMealRequestsService,
