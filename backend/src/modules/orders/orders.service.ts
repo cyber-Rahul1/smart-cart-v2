@@ -222,7 +222,6 @@ export class OrdersService {
   ): Promise<Order> {
     const orderItems: Partial<OrderItem>[] = [
       {
-        productId: null,
         productNameSnapshot: dto.productNameSnapshot,
         unitPriceSnapshot: dto.unitPriceSnapshot,
         quantity: dto.quantity,

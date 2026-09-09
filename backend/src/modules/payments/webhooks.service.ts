@@ -115,19 +115,19 @@ export class WebhooksService {
         } else if (payment.allocationId) {
           // COMMUNITY MEAL ALLOCATION PAYMENT
           // Lock hierarchy: Payment -> MealAllocation -> CommunityMealOffer
-          const MealAllocation = import('../community-meals/entities/meal-allocation.entity.js').MealAllocation;
-          const allocation = await manager.findOne(MealAllocation, {
+          const { MealAllocation } = await import('../community-meals/entities/meal-allocation.entity.js');
+          const allocation: any = await manager.findOne(MealAllocation as any, {
             where: { id: payment.allocationId },
             lock: { mode: 'pessimistic_write' },
             relations: { request: true, offer: true }
-          });
+          } as any);
 
           if (!allocation) {
             throw new InternalServerErrorException(`Allocation ${payment.allocationId} not found`);
           }
 
-          const CommunityMealOffer = import('../community-meals/entities/community-meal-offer.entity.js').CommunityMealOffer;
-          const offer = await manager.findOne(CommunityMealOffer, {
+          const { CommunityMealOffer } = await import('../community-meals/entities/community-meal-offer.entity.js');
+          const offer: any = await manager.findOne(CommunityMealOffer as any, {
             where: { id: allocation.offerId },
             lock: { mode: 'pessimistic_write' }
           });
