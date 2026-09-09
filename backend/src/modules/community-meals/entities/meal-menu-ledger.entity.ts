@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, type Relation } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, VersionColumn, type Relation } from 'typeorm';
 import { MealMenuLedgerStatus } from '../enums/meal-menu-ledger-status.enum.js';
 import type { MealAllocation } from './meal-allocation.entity.js';
 
@@ -37,6 +37,9 @@ export class MealMenuLedger {
 
   @Column({ type: 'timestamptz', nullable: true })
   finalizedAt: Date;
+
+  @VersionColumn()
+  version: number;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

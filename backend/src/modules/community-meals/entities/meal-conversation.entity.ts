@@ -1,7 +1,8 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, type Relation } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, Index, type Relation } from 'typeorm';
 import type { MealAllocation } from './meal-allocation.entity.js';
 
 @Entity('meal_conversations')
+@Index(['allocationId'], { unique: true })
 export class MealConversation {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -15,6 +15,7 @@ import { CommunityMealOffer } from './entities/community-meal-offer.entity.js';
 import { MealAllocation } from './entities/meal-allocation.entity.js';
 import { MealConversation } from './entities/meal-conversation.entity.js';
 import { MealMenuLedger } from './entities/meal-menu-ledger.entity.js';
+import { MealMessage } from './entities/meal-message.entity.js';
 import { KitchenCompliance } from './entities/kitchen-compliance.entity.js';
 import { Shop } from '../shops/entities/shop.entity.js';
 import { KitchenCommunityMealsController } from './controllers/kitchen-community-meals.controller.js';
@@ -33,6 +34,7 @@ import { ReservationExpiryProcessor } from './processors/reservation-expiry.proc
       MealAllocation,
       MealConversation,
       MealMenuLedger,
+      MealMessage,
       KitchenCompliance,
       Shop,
       Address,
