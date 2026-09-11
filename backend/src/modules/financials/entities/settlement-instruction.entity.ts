@@ -55,6 +55,36 @@ export class SettlementInstruction {
   @Column({ nullable: true })
   providerTransferId: string;
 
+  // ---- Phase 12B-8 payout-processing foundation (all additive/nullable) ----
+
+  /** Timestamp when the provider confirmed successful settlement. */
+  @Column({ type: 'timestamptz', nullable: true })
+  completedAt: Date | null;
+
+  /** Timestamp of a terminal (FAILED) transition. */
+  @Column({ type: 'timestamptz', nullable: true })
+  failedAt: Date | null;
+
+  /** Normalized failure class (e.g. COMPLIANCE_BLOCKED, PROVIDER_TIMEOUT). */
+  @Column({ type: 'varchar', nullable: true })
+  errorCode: string | null;
+
+  /** Structured, secret-free failure context. */
+  @Column({ type: 'jsonb', nullable: true })
+  errorDetails: Record<string, any> | null;
+
+  /** Dispatch/reconciliation attempt counter (drives retry policy). */
+  @Column({ type: 'int', default: 0 })
+  retryCount: number;
+
+  /** Last dispatch/reconciliation attempt time (stale-PROCESSING detection). */
+  @Column({ type: 'timestamptz', nullable: true })
+  lastAttemptAt: Date | null;
+
+  /** Sanitized provider response snapshot (never credentials/PII). */
+  @Column({ type: 'jsonb', nullable: true })
+  providerResponse: Record<string, any> | null;
+
   @Column()
   idempotencyKey: string;
 

@@ -13,6 +13,8 @@ import { AuditLog } from '../audit/entities/audit-log.entity.js';
 import { BullModule } from '@nestjs/bullmq';
 import { FINANCIAL_SETTLEMENTS_QUEUE } from './constants/financials.constants.js';
 import { SettlementEligibilityProcessor } from './jobs/settlement-eligibility.processor.js';
+import { PAYOUT_PROVIDER } from './constants/payout.constants.js';
+import { PayoutProviderFactory } from './providers/payout-provider.factory.js';
 
 @Module({
   imports: [
@@ -28,7 +30,16 @@ import { SettlementEligibilityProcessor } from './jobs/settlement-eligibility.pr
     ]),
     BullModule.registerQueue({ name: FINANCIAL_SETTLEMENTS_QUEUE }),
   ],
-  providers: [SettlementInstructionService, SettlementEligibilityProcessor],
+  providers: [
+    SettlementInstructionService,
+    SettlementEligibilityProcessor,
+    PayoutProviderFactory,
+    {
+      provide: PAYOUT_PROVIDER,
+      useFactory: (factory: PayoutProviderFactory) => factory.resolve(),
+      inject: [PayoutProviderFactory],
+    },
+  ],
   exports: [SettlementInstructionService],
 })
-export class FinancialsModule {}
+export class FinancialsModule { }

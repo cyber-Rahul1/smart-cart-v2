@@ -62,3 +62,15 @@ This file tracks significant technical and business decisions.
 - Modeled FSSAI as a lifecycle status rather than a string.
 - Configured SettlementInstruction to split all payout lines explicitly for future tax routing.
 - Active allocations are constrained exclusively at the DB level using a partial unique index on (userId, requestId).
+
+## Payout Provider Selection Blocker (Phase 12B-8)
+- **Status**: OPEN
+- **Date**: 2026-09-09
+- **Decision**: No external payout provider has been selected. Real money movement (Phase 12B-8 Increment 2+) is BLOCKED until a provider is chosen and its contract is documented. Phase 12B-8 Increment 1 ships only the provider-independent foundation: `IPayoutProvider` abstraction, `PAYOUT_PROVIDER` configuration, a production-disabled stub provider, payout support columns on `settlement_instructions`, and the structural settlement state machine.
+- **Reason**: 
+  - The existing Razorpay integration is **payment (collection) only**. The installed `razorpay` SDK does not cover payout APIs (e.g. RazorpayX Payouts is a separate product with a different API base and auth model). Payment integration must not be confused with payout integration.
+  - Real payout requires a separate provider contract: dispatch semantics, idempotency-key support, status vocabulary, webhook signature/event model, and a status-query API.
+  - The beneficiary/payout-account model is provider-dependent. No bank-account/beneficiary storage exists anywhere in the repository today (`KitchenCompliance` holds only a `settlementAccountStatus` string); this must be designed against the chosen provider.
+  - Provider selection (RazorpayX vs Stripe Connect vs bank rails) is a business/compliance decision, not an engineering one.
+- **Alternatives**: Silently adopting RazorpayX (rejected — no mandate or contract); reusing the legacy `Payout`/`Settlement` entities (rejected — different model, would create a dual-ledger divergence; `SettlementInstruction` remains the single payout ledger).
+- **Consequences**: Until a provider is selected, `PAYOUT_PROVIDER="none"` (the production/staging default) keeps payout processing structurally disabled — every payout operation throws `PayoutProviderNotConfiguredException`. `"stub"` is valid only outside production (rejected by env validation and by a runtime guard) and never moves real money. When a provider is selected, extend the Joi env validation and `PayoutProviderFactory` with the new provider name; no domain-layer changes are required.

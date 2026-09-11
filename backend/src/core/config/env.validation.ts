@@ -16,7 +16,7 @@ export const envValidationSchema = Joi.object({
   JWT_SECRET: Joi.string().required(),
   JWT_EXPIRATION: Joi.string().required(),
   JWT_REFRESH_EXPIRATION: Joi.string().required(),
-  
+
   // Twilio
   USE_MOCK_TWILIO: Joi.boolean().default(false),
   TWILIO_ACCOUNT_SID: Joi.when('NODE_ENV', {
@@ -50,6 +50,15 @@ export const envValidationSchema = Joi.object({
     is: Joi.string().valid('production', 'staging'),
     then: Joi.string().required(),
     otherwise: Joi.string().optional().allow(''),
+  }),
+
+  // Payout provider (Phase 12B-8). No real provider is selected yet:
+  // production/staging stays disabled ("none") until one is chosen —
+  // see docs/DECISIONS.md (Payout Provider Selection Blocker).
+  PAYOUT_PROVIDER: Joi.when('NODE_ENV', {
+    is: Joi.string().valid('production', 'staging'),
+    then: Joi.string().valid('none').default('none'),
+    otherwise: Joi.string().valid('stub', 'none').default('stub'),
   }),
 
   // Push / FCM
