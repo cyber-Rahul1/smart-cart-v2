@@ -39,7 +39,7 @@ export class DisabledPayoutProvider implements IPayoutProvider {
         return Promise.reject(new PayoutProviderNotConfiguredException());
     }
 
-    verifyWebhook(_signature: string, _rawBody: Buffer): boolean {
+    verifyWebhook(_headers: Record<string, string | string[] | undefined>, _rawBody: Buffer): boolean {
         return false;
     }
 

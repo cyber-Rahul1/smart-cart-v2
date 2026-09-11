@@ -16,11 +16,15 @@ import { SettlementEligibilityProcessor } from './jobs/settlement-eligibility.pr
 import { PAYOUT_PROVIDER } from './constants/payout.constants.js';
 import { PayoutProviderFactory } from './providers/payout-provider.factory.js';
 import { PayoutDispatchService } from './services/payout-dispatch.service.js';
+import { PayoutWebhooksController } from './controllers/payout-webhooks.controller.js';
+import { PayoutWebhooksService } from './services/payout-webhooks.service.js';
+import { WebhookEvent } from '../payments/entities/webhook-event.entity.js';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       SettlementInstruction,
+      WebhookEvent,
       Commission,
       Order,
       Shop,
@@ -31,6 +35,7 @@ import { PayoutDispatchService } from './services/payout-dispatch.service.js';
     ]),
     BullModule.registerQueue({ name: FINANCIAL_SETTLEMENTS_QUEUE }),
   ],
+  controllers: [PayoutWebhooksController],
   providers: [
     SettlementInstructionService,
     SettlementEligibilityProcessor,
@@ -41,7 +46,8 @@ import { PayoutDispatchService } from './services/payout-dispatch.service.js';
       inject: [PayoutProviderFactory],
     },
     PayoutDispatchService,
+    PayoutWebhooksService,
   ],
-  exports: [SettlementInstructionService, PayoutDispatchService],
+  exports: [SettlementInstructionService, PayoutDispatchService, PayoutWebhooksService],
 })
 export class FinancialsModule { }

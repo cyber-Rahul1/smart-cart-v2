@@ -103,7 +103,7 @@ describe('StubPayoutProvider (simulated only — never real money)', () => {
 
     it('refuses to verify webhooks and refuses to parse webhook events', () => {
         const provider = new StubPayoutProvider();
-        expect(provider.verifyWebhook('sig', Buffer.from('body'))).toBe(false);
+        expect(provider.verifyWebhook({ 'x-sig': 'sig' }, Buffer.from('body'))).toBe(false);
         expect(() => provider.parseWebhookEvent({})).toThrow();
     });
 
@@ -134,7 +134,7 @@ describe('DisabledPayoutProvider (payouts disabled)', () => {
     it('throws on status query and webhook parsing; never verifies webhooks', async () => {
         const provider = new DisabledPayoutProvider();
         await expect(provider.getPayoutStatus('t1')).rejects.toThrow(PayoutProviderNotConfiguredException);
-        expect(provider.verifyWebhook('sig', Buffer.from('b'))).toBe(false);
+        expect(provider.verifyWebhook({ 'x-sig': 'sig' }, Buffer.from('b'))).toBe(false);
         expect(() => provider.parseWebhookEvent({})).toThrow(PayoutProviderNotConfiguredException);
     });
 });

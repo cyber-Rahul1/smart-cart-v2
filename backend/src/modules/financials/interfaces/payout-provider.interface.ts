@@ -55,8 +55,20 @@ export interface PayoutStatusResult {
 }
 
 /**
- * Normalized payout webhook event (used by a later increment's webhook
- * processing, which will reuse the existing webhook_events dedup pattern).
+ * Normalized payout webhook event (used by the webhook service).
+ *
+ * STRICT NORMALIZATION CONTRACT:
+ * The webhook service blindly trusts the status returned here. It is the
+ * exclusive responsibility of the IPayoutProvider adapter to determine if an
+ * event maps to FAILED.
+ *
+ * The adapter may return PayoutProviderStatus.FAILED ONLY when the provider's
+ * webhook semantics definitively establish that the payout was rejected and
+ * NO MONEY MOVED.
+ *
+ * Any ambiguous failure, cancellation, timeout, unknown state, or event where
+ * money movement cannot be categorically ruled out MUST be normalized to
+ * PayoutProviderStatus.UNKNOWN or PayoutProviderStatus.PROCESSING.
  */
 export interface ParsedPayoutWebhookEvent {
     providerEventId: string;
@@ -77,6 +89,6 @@ export interface ParsedPayoutWebhookEvent {
 export interface IPayoutProvider {
     dispatchPayout(req: PayoutDispatchRequest): Promise<PayoutDispatchResult>;
     getPayoutStatus(providerTransferId: string): Promise<PayoutStatusResult>;
-    verifyWebhook(signature: string, rawBody: Buffer): boolean;
+    verifyWebhook(headers: Record<string, string | string[] | undefined>, rawBody: Buffer): boolean;
     parseWebhookEvent(payload: unknown): ParsedPayoutWebhookEvent;
 }

@@ -52,6 +52,7 @@ export class SettlementInstruction {
   @Column({ type: 'enum', enum: SettlementInstructionStatus, default: SettlementInstructionStatus.PENDING })
   status: SettlementInstructionStatus;
 
+  @Index()
   @Column({ nullable: true })
   providerTransferId: string;
 

@@ -116,7 +116,7 @@ export class StubPayoutProvider implements IPayoutProvider {
         };
     }
 
-    verifyWebhook(_signature: string, _rawBody: Buffer): boolean {
+    verifyWebhook(_headers: Record<string, string | string[] | undefined>, _rawBody: Buffer): boolean {
         // The stub has no webhook contract and must never pretend otherwise.
         return false;
     }
