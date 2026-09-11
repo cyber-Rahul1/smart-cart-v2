@@ -15,6 +15,7 @@ import { FINANCIAL_SETTLEMENTS_QUEUE } from './constants/financials.constants.js
 import { SettlementEligibilityProcessor } from './jobs/settlement-eligibility.processor.js';
 import { PAYOUT_PROVIDER } from './constants/payout.constants.js';
 import { PayoutProviderFactory } from './providers/payout-provider.factory.js';
+import { PayoutDispatchService } from './services/payout-dispatch.service.js';
 
 @Module({
   imports: [
@@ -39,7 +40,8 @@ import { PayoutProviderFactory } from './providers/payout-provider.factory.js';
       useFactory: (factory: PayoutProviderFactory) => factory.resolve(),
       inject: [PayoutProviderFactory],
     },
+    PayoutDispatchService,
   ],
-  exports: [SettlementInstructionService],
+  exports: [SettlementInstructionService, PayoutDispatchService],
 })
 export class FinancialsModule { }
