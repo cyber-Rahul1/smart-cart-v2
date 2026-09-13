@@ -18,6 +18,7 @@ import { PayoutProviderFactory } from './providers/payout-provider.factory.js';
 import { PayoutDispatchService } from './services/payout-dispatch.service.js';
 import { PayoutWebhooksController } from './controllers/payout-webhooks.controller.js';
 import { PayoutWebhooksService } from './services/payout-webhooks.service.js';
+import { PayoutReconciliationService } from './services/payout-reconciliation.service.js';
 import { WebhookEvent } from '../payments/entities/webhook-event.entity.js';
 
 @Module({
@@ -47,7 +48,8 @@ import { WebhookEvent } from '../payments/entities/webhook-event.entity.js';
     },
     PayoutDispatchService,
     PayoutWebhooksService,
+    PayoutReconciliationService,
   ],
-  exports: [SettlementInstructionService, PayoutDispatchService, PayoutWebhooksService],
+  exports: [SettlementInstructionService, PayoutDispatchService, PayoutWebhooksService, PayoutReconciliationService],
 })
 export class FinancialsModule { }
