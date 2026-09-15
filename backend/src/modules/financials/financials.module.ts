@@ -17,6 +17,7 @@ import { PAYOUT_PROVIDER } from './constants/payout.constants.js';
 import { PayoutProviderFactory } from './providers/payout-provider.factory.js';
 import { PayoutDispatchService } from './services/payout-dispatch.service.js';
 import { PayoutWebhooksController } from './controllers/payout-webhooks.controller.js';
+import { AdminSettlementsController } from './controllers/admin-settlements.controller.js';
 import { PayoutWebhooksService } from './services/payout-webhooks.service.js';
 import { PayoutReconciliationService } from './services/payout-reconciliation.service.js';
 import { WebhookEvent } from '../payments/entities/webhook-event.entity.js';
@@ -36,7 +37,7 @@ import { WebhookEvent } from '../payments/entities/webhook-event.entity.js';
     ]),
     BullModule.registerQueue({ name: FINANCIAL_SETTLEMENTS_QUEUE }),
   ],
-  controllers: [PayoutWebhooksController],
+  controllers: [PayoutWebhooksController, AdminSettlementsController],
   providers: [
     SettlementInstructionService,
     SettlementEligibilityProcessor,

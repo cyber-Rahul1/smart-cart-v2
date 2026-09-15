@@ -150,12 +150,12 @@ describe('Settlement Eligibility & Outbox Integration (DB)', () => {
 
   beforeEach(async () => {
     // Scaffold base data
-    user = await userRepo.save(userRepo.create({
+    user = (await userRepo.save(userRepo.create({
       phoneNumber: '+1555' + Math.floor(Math.random() * 100000000),
       firstName: 'Test',
       lastName: 'User',
       passwordHashed: 'dummy',
-    }));
+    } as any))) as any as User;
 
     customer = await customerRepo.save(customerRepo.create({
       userId: user.id,
@@ -193,16 +193,16 @@ describe('Settlement Eligibility & Outbox Integration (DB)', () => {
     }));
 
     // Dummy Request/Offer/Cluster
-    const cluster = await dataSource.getRepository(CommunityMealCluster).save({
+    const cluster = (await dataSource.getRepository(CommunityMealCluster).save({
       cuisine: 'Mexican',
       mealType: 'Dinner',
       centroid: { type: 'Point', coordinates: [77, 12] },
       status: 'OFFERING',
       timeWindowStart: new Date(),
       timeWindowEnd: new Date(Date.now() + 3600000),
-    });
+    } as any)) as CommunityMealCluster;
 
-    const request = await dataSource.getRepository(CommunityMealRequest).save({
+    const request = (await dataSource.getRepository(CommunityMealRequest).save({
       userId: user.id,
       cuisine: 'Mexican',
       mealType: 'Dinner',
@@ -215,9 +215,9 @@ describe('Settlement Eligibility & Outbox Integration (DB)', () => {
       timeWindowStart: new Date(),
       timeWindowEnd: new Date(Date.now() + 3600000),
       expiresAt: new Date(Date.now() + 1800000),
-    });
+    } as any)) as CommunityMealRequest;
 
-    const offer = await dataSource.getRepository(CommunityMealOffer).save({
+    const offer = (await dataSource.getRepository(CommunityMealOffer).save({
       shopId: shop.id,
       clusterId: cluster.id,
       pricePerServing: 1000,
@@ -229,7 +229,7 @@ describe('Settlement Eligibility & Outbox Integration (DB)', () => {
       menuDescription: 'Yummy',
       expiresAt: new Date(Date.now() + 1800000),
       menuLockAt: new Date(Date.now() + 1800000),
-    });
+    } as any)) as CommunityMealOffer;
 
     const allocation = await mealAllocationRepo.save({
       userId: user.id,

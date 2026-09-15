@@ -1,4 +1,4 @@
-import { Injectable, Inject, Logger } from '@nestjs/common';
+import { Injectable, Inject, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -50,7 +50,7 @@ export class PayoutReconciliationService {
 
       // Process candidates sequentially
       for (const candidate of candidates) {
-        await this.reconcileInstruction(candidate);
+        await this.reconcileInstructionCore(candidate);
       }
     } catch (error) {
       this.logger.error('Error during payout reconciliation job', error instanceof Error ? error.stack : String(error));
@@ -59,7 +59,22 @@ export class PayoutReconciliationService {
     }
   }
 
-  private async reconcileInstruction(candidate: SettlementInstruction) {
+  public async reconcileSingleInstruction(id: string): Promise<void> {
+    const candidate = await this.instructionRepo.findOneBy({ id });
+    if (!candidate) {
+      throw new NotFoundException(`Settlement instruction ${id} not found`);
+    }
+    if (candidate.status !== SettlementInstructionStatus.PROCESSING) {
+      throw new ConflictException(`Cannot reconcile instruction ${id} in status ${candidate.status}`);
+    }
+    if (!candidate.providerTransferId) {
+      throw new ConflictException(`Instruction ${id} has no providerTransferId`);
+    }
+    
+    await this.reconcileInstructionCore(candidate);
+  }
+
+  private async reconcileInstructionCore(candidate: SettlementInstruction) {
     const providerTransferId = candidate.providerTransferId;
     if (!providerTransferId) {
       return; // Defensive check, should be caught by DB query
